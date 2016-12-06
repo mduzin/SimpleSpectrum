@@ -17,12 +17,12 @@ print("Compression type: ".ljust(25),WaveObj.getcomptype(),"\n")
  
 WaveParams = WaveObj.getparams(); print("Params: ".ljust(25),WaveParams, "\n")
 
+#we assume that sample are unsigned integer type (need to confirm)
 FormatDict = {1:'B',2:'H',4:'I',8:'Q'}
 
+#.wav file is always Little Endian so we use '<'
 WaveFmt = '<' + FormatDict[WaveParams.sampwidth]*WaveParams.nchannels
 print(WaveFmt)
-
-print(struct.unpack(WaveFmt, WaveObj.readframes(1)))
 
 while True:
     WaveFrame = WaveObj.readframes(1)
