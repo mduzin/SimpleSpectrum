@@ -1,9 +1,12 @@
 import wave
 import os
 import sys
+import struct
+
+def ByteListToNum(bytes):
+  return int(bytes.encode('hex'), 16)
  
-FileName = "test.wav"
- 
+FileName = "test1.wav"
 WaveObj = wave.open(FileName, mode='rb')
  
 print("Channels: ".ljust(25),WaveObj.getnchannels())
@@ -13,24 +16,21 @@ print("Number of audio frames: ".ljust(25),WaveObj.getnframes())
 print("Compression type: ".ljust(25),WaveObj.getcomptype(),"\n")
  
 WaveParams = WaveObj.getparams(); print("Params: ".ljust(25),WaveParams, "\n")
- 
-#chcialbym zeby chunk mial 100 probek/frame'ow/ramek, niezaleznie ile jest kanalow 
-ChunkSize = 100
+
+FormatDict = {1:'B',2:'H',4:'I',8:'Q'}
+
+WaveFmt = '<' + FormatDict[WaveParams.sampwidth]*WaveParams.nchannels
+print(WaveFmt)
+
+print(struct.unpack(WaveFmt, WaveObj.readframes(1)))
+
 while True:
     WaveFrame = WaveObj.readframes(1)
     if not WaveFrame: break
     #Przetwarzanie ramki 
  
     #wydrukuj poszegolne ramki
-    #print("Raw: ",WaveFrame, end=" ")
- 
-    for Channel in range(WaveParams.nchannels):
-       StartIndex = Channel * WaveParams.sampwidth
-       StopIndex  = StartIndex + WaveParams.sampwidth
-       print("Channel ", Channel,": ",WaveFrame[StartIndex:StopIndex], end=" ") 
-       BytesSample = WaveFrame[StartIndex:StopIndex]
-    print("")
- 
+    print(struct.unpack(WaveFmt, WaveFrame))
  
  
 print("Koniec pliku .wav")
