@@ -43,7 +43,7 @@ WaveObj.close()
 #WaveParams and WaveData variables    
 
 #number of frames we need to calculate current spectrum, eqaul to sampling frequency
-WindowLength = 20#WaveParams.framerate
+WindowLength = WaveParams.framerate
 #num of frames over which we will shift our signal
 WindowShift  = math.floor(WaveParams.framerate/2)
 
@@ -59,33 +59,34 @@ for n in range(WaveParams.nchannels):
 StartIndex = 0 # pozniej bedzie obliczane to w petli o kroku (StartIndex += WindowShift)
 
 #nie wiem czy nie musze zrobic zero-padding jesli mam mnie probek niz dlugosc zasaniczej ramki
-WaveWindow = WaveData[StartIndex:(StartIndex+WindowLength-5)]
+WaveWindow = WaveData[StartIndex:(StartIndex+WindowLength)]
 RealWindowLength = len(WaveWindow)
 
 #if RealWindowLength < WindowLength: 
 #    WaveWindow = WaveWindow + [0]*(WindowLength - RealWindowLength) # zamiast [0], musi byc wlasciwa struktura
 
 Spectrum = (2/RealWindowLength)*np.fft.fft(WaveWindow)
+Spectrum = Spectrum[range(math.floor(RealWindowLength/2))]
     
-    
-#teraz policzy widmo z pierwszej paczki
-#SamplesNum = WaveParams.framerate 
-#SpectrumWindow = WaveChannel0[0:SamplesNum]
-#n = len(SpectrumWindow)
+#prepare additional data for plot    
+#Sampling rate
+Fs = WaveParams.framerate
+#Sampling interval
+Ts = 1.0/Fs
+#Time axis
+t = np.arange(StartIndex*Ts,(StartIndex+RealWindowLength)*Ts,Ts)
+#Time lenght of analyzed frame [s]
+T = RealWindowLength/Fs
+#Frequency axis
+frq = np.arange(RealWindowLength)/T
+#reduce to Nyquist frequency
+frq = frq[range(math.floor(RealWindowLength/2))] 
 
-#Spectrum = (2/n)*np.fft.fft(SpectrumWindow)
-#Spectrum = Spectrum[range(math.floor(n/2))]
 
-#fs = SamplesNum
-#Ts = 1/fs                     
-#t = np.arange(0,1,Ts)
-
-#frq = np.arange(math.floor(n/2)) # one side frequency range
-
-#fig, ax = plt.subplots(2, 1)
-#ax[0].plot(t,SpectrumWindow)
-#ax[0].set_xlabel('Time')
-#ax[0].set_ylabel('Amplitude')
-#ax[1].plot(frq,abs(Spectrum),'r') # plotting the spectrum
-#ax[1].set_xlabel('Freq (Hz)')
-#ax[1].set_ylabel('|Y(freq)|')
+fig, ax = plt.subplots(2, 1)
+ax[0].plot(t,WaveWindow)
+ax[0].set_xlabel('Time')
+ax[0].set_ylabel('Amplitude')
+ax[1].plot(frq,abs(Spectrum),'r') # plotting the spectrum
+ax[1].set_xlabel('Freq (Hz)')
+ax[1].set_ylabel('|Y(freq)|')
