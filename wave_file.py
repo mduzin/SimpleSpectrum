@@ -4,10 +4,8 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
-def ByteListToNum(bytes):
-  return int(bytes.encode('hex'), 16)
  
-FileName = "test4.wav"
+FileName = "test5.wav"
 WaveObj = wave.open(FileName, mode='rb')
  
 print("Channels: ".ljust(25),WaveObj.getnchannels())
@@ -31,9 +29,7 @@ WaveData = []
 while True:
     WaveFrame = WaveObj.readframes(1)
     if not WaveFrame: break
-    #Przetwarzanie ramki 
- 
-    #zapisz ramki
+    #zapisz ramke jako tuplet
     WaveData.append(struct.unpack(WaveFmt, WaveFrame))
    
 print("Koniec czytania pliku .wav")
@@ -49,9 +45,10 @@ WindowShift  = math.floor(WaveParams.framerate/2)
 
 
 
+#<TODO:> zrobic jako pojedynca petla
 WaveChannel = []
 for n in range(WaveParams.nchannels):
-    WaveChannel.append([sample[0] for sample in WaveData])
+    WaveChannel.append([sample[n] for sample in WaveData])
 
 
 
@@ -59,14 +56,17 @@ for n in range(WaveParams.nchannels):
 StartIndex = 0 # pozniej bedzie obliczane to w petli o kroku (StartIndex += WindowShift)
 
 #nie wiem czy nie musze zrobic zero-padding jesli mam mnie probek niz dlugosc zasaniczej ramki
-WaveWindow = WaveData[StartIndex:(StartIndex+WindowLength)]
+WaveWindow = np.array(WaveData[StartIndex:(StartIndex+WindowLength)])
 RealWindowLength = len(WaveWindow)
 
 #if RealWindowLength < WindowLength: 
 #    WaveWindow = WaveWindow + [0]*(WindowLength - RealWindowLength) # zamiast [0], musi byc wlasciwa struktura
 
-Spectrum = (2/RealWindowLength)*np.fft.fft(WaveWindow)
-Spectrum = Spectrum[range(math.floor(RealWindowLength/2))]
+#narazie spectrum tylko dla kanalu 0
+Spectrum = []
+for n in range(WaveParams.nchannels):
+    Spectrum.append((2/RealWindowLength)*np.fft.fft(WaveChannel[n]))
+    Spectrum[n] = Spectrum[n][range(math.floor(RealWindowLength/2))]
     
 #prepare additional data for plot    
 #Sampling rate
@@ -83,10 +83,10 @@ frq = np.arange(RealWindowLength)/T
 frq = frq[range(math.floor(RealWindowLength/2))] 
 
 
-fig, ax = plt.subplots(2, 1)
-ax[0].plot(t,WaveWindow)
-ax[0].set_xlabel('Time')
-ax[0].set_ylabel('Amplitude')
-ax[1].plot(frq,abs(Spectrum),'r') # plotting the spectrum
-ax[1].set_xlabel('Freq (Hz)')
-ax[1].set_ylabel('|Y(freq)|')
+#fig, ax = plt.subplots(2, 1)
+#ax[0].plot(t,WaveWindow)
+#ax[0].set_xlabel('Time')
+#ax[0].set_ylabel('Amplitude')
+#ax[1].plot(frq,abs(Spectrum),'r') # plotting the spectrum
+#ax[1].set_xlabel('Freq (Hz)')
+#ax[1].set_ylabel('|Y(freq)|')
