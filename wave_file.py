@@ -21,8 +21,8 @@ def DivideList(Spectrum,N,aggr_func):
     return BarSpectrum
  
 #FileName = "WaveTest.wav"
-FileName = "test.wav"
-#FileName = "test2.wav"
+#FileName = "test.wav"
+FileName = "test4.wav"
 WaveObj = wave.open(FileName, mode='rb')
  
 print("Channels: ".ljust(25),WaveObj.getnchannels())
@@ -38,12 +38,13 @@ WaveParams = WaveObj.getparams(); #print("Params: ".ljust(25),WaveParams, "\n")
 #.wav file is always Little Endian so we use '<'
 FormatDict = {1:'B',2:'h',4:'i',8:'q'}
  
- 
+#FPS          - ilosc klatek na sekunde 
 #WindowLength - number of frames we need to calculate current spectrum, eqaul to sampling frequency
 #WindowShift  - number of frames over which we will shift our signal in single iteration (half of WindowLength)
 #WaveData     - array of frame tuples from .wav file
+FPS = 27
 WindowLength = WaveParams.framerate
-WindowShift  = math.floor(WaveParams.framerate/2)
+WindowShift  = math.floor(WaveParams.framerate/FPS)
 WaveData = []
 WaveChannel = []
 Spectrum = []
@@ -71,6 +72,7 @@ while True:
         WaveChannelLen = len(WaveChannel[n])
         Spectrum[n] = (2/WaveChannelLen)*np.fft.fft(WaveChannel[n])
         Spectrum[n] = Spectrum[n][range(math.floor(WaveChannelLen/2))]
+        Spectrum[n] = abs(Spectrum[n])
  
         #teraz dzielimy nasze spectrum na N przedzialow
         #N - ilosc przedzialow
@@ -79,6 +81,15 @@ while True:
         BarSpectrum.append(DivideList(Spectrum[n],N,max))
         
  
+    #rysuj/updatuj wykres widma
+    plt.figure(1)
+    plt.ylabel('Amplitude')
+    plt.xlabel('Czestoliwosc [Hz]')
+    plt.title('Widmo')
+    #plt.plot(abs(Spectrum[0]),'r')
+    plt.bar(np.arange(N),BarSpectrum[0])
+    plt.grid(True)
+    plt.show()
  
     print("Iter: ",i)
     print("FramesNum: ",FramesNum)
