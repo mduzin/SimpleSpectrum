@@ -1,11 +1,28 @@
 import wave
 import struct
-import numpy as np
 import math
+import numpy as np
 import matplotlib.pyplot as plt
-
  
-FileName = "test5.wav"
+ 
+def DivideList(Spectrum,N,aggr_func):
+    BarRange = len(Spectrum)/N
+    BarSpectrum = []
+ 
+    #czy mozna jakos zoptymalizowac Start i Stop Index'u???
+    StartIndex = 0.0
+    StopIndex = StartIndex + BarRange
+    for x in range(N):
+        BarSpectrum.append(Spectrum[round(StartIndex):round(StopIndex)])
+        StartIndex = StopIndex;
+        StopIndex =  StartIndex + BarRange
+ 
+    BarSpectrum = [aggr_func(x) for x in BarSpectrum]
+    return BarSpectrum
+ 
+#FileName = "WaveTest.wav"
+FileName = "test.wav"
+#FileName = "test2.wav"
 WaveObj = wave.open(FileName, mode='rb')
  
 print("Channels: ".ljust(25),WaveObj.getnchannels())
@@ -15,78 +32,61 @@ print("Number of audio frames: ".ljust(25),WaveObj.getnframes())
 print("Compression type: ".ljust(25),WaveObj.getcomptype(),"\n")
  
 WaveParams = WaveObj.getparams(); #print("Params: ".ljust(25),WaveParams, "\n")
-
-
+ 
 #8-bit samples are stored as unsigned bytes, ranging from 0 to 255. 
 #16-bit samples are stored as 2's-complement signed integers, ranging from -32768 to 32767.
-FormatDict = {1:'B',2:'h',4:'i',8:'q'}
-
 #.wav file is always Little Endian so we use '<'
-WaveFmt = '<' + FormatDict[WaveParams.sampwidth]*WaveParams.nchannels
-print(WaveFmt)
-
-WaveData = []
-while True:
-    WaveFrame = WaveObj.readframes(1)
-    if not WaveFrame: break
-    #zapisz ramke jako tuplet
-    WaveData.append(struct.unpack(WaveFmt, WaveFrame))
-   
-print("Koniec czytania pliku .wav")
-WaveObj.close()
-
-#We are done with .wav file. All information we need are in
-#WaveParams and WaveData variables    
-
-#number of frames we need to calculate current spectrum, eqaul to sampling frequency
+FormatDict = {1:'B',2:'h',4:'i',8:'q'}
+ 
+ 
+#WindowLength - number of frames we need to calculate current spectrum, eqaul to sampling frequency
+#WindowShift  - number of frames over which we will shift our signal in single iteration (half of WindowLength)
+#WaveData     - array of frame tuples from .wav file
 WindowLength = WaveParams.framerate
-#num of frames over which we will shift our signal
 WindowShift  = math.floor(WaveParams.framerate/2)
-
-
-
-#<TODO:> zrobic jako pojedynca petla
+WaveData = []
 WaveChannel = []
-for n in range(WaveParams.nchannels):
-    WaveChannel.append([sample[n] for sample in WaveData])
-
-
-
-#Acquire window of samples
-StartIndex = 0 # pozniej bedzie obliczane to w petli o kroku (StartIndex += WindowShift)
-
-#nie wiem czy nie musze zrobic zero-padding jesli mam mnie probek niz dlugosc zasaniczej ramki
-WaveWindow = np.array(WaveData[StartIndex:(StartIndex+WindowLength)])
-RealWindowLength = len(WaveWindow)
-
-#if RealWindowLength < WindowLength: 
-#    WaveWindow = WaveWindow + [0]*(WindowLength - RealWindowLength) # zamiast [0], musi byc wlasciwa struktura
-
-#narazie spectrum tylko dla kanalu 0
 Spectrum = []
-for n in range(WaveParams.nchannels):
-    Spectrum.append((2/RealWindowLength)*np.fft.fft(WaveChannel[n]))
-    Spectrum[n] = Spectrum[n][range(math.floor(RealWindowLength/2))]
+ 
+for item in range(WaveParams.nchannels):
+    WaveChannel.append([])
+    Spectrum.append([])
     
-#prepare additional data for plot    
-#Sampling rate
-Fs = WaveParams.framerate
-#Sampling interval
-Ts = 1.0/Fs
-#Time axis
-t = np.arange(StartIndex*Ts,(StartIndex+RealWindowLength)*Ts,Ts)
-#Time lenght of analyzed frame [s]
-T = RealWindowLength/Fs
-#Frequency axis
-frq = np.arange(RealWindowLength)/T
-#reduce to Nyquist frequency
-frq = frq[range(math.floor(RealWindowLength/2))] 
-
-
-#fig, ax = plt.subplots(2, 1)
-#ax[0].plot(t,WaveWindow)
-#ax[0].set_xlabel('Time')
-#ax[0].set_ylabel('Amplitude')
-#ax[1].plot(frq,abs(Spectrum),'r') # plotting the spectrum
-#ax[1].set_xlabel('Freq (Hz)')
-#ax[1].set_ylabel('|Y(freq)|')
+ 
+i=0
+FramesNum = WindowLength
+while True:
+    WaveFrame = WaveObj.readframes(FramesNum)
+    if not WaveFrame: break
+    BarSpectrum = []
+    RealFrameNum = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
+    WaveFrame = struct.unpack('<{n}{t}'.format(n=RealFrameNum*WaveParams.nchannels,t=FormatDict[WaveParams.sampwidth]),WaveFrame)
+ 
+    for n in range(WaveParams.nchannels):
+        #isolate each channel 
+        WaveChannel[n] = WaveChannel[n][RealFrameNum:]
+        WaveChannel[n].extend([sample for (index,sample) in enumerate(WaveFrame) if (n == (index%WaveParams.nchannels))])
+ 
+        #compute FFT for each channel
+        WaveChannelLen = len(WaveChannel[n])
+        Spectrum[n] = (2/WaveChannelLen)*np.fft.fft(WaveChannel[n])
+        Spectrum[n] = Spectrum[n][range(math.floor(WaveChannelLen/2))]
+ 
+        #teraz dzielimy nasze spectrum na N przedzialow
+        #N - ilosc przedzialow
+        #BarRange - ilosc prazakow czestotliwosci przypadajacych na pojedynczy przedzial
+        N=16
+        BarSpectrum.append(DivideList(Spectrum[n],N,max))
+        
+ 
+ 
+    print("Iter: ",i)
+    print("FramesNum: ",FramesNum)
+    print("RealFrameNum: ",RealFrameNum )
+    print("len(WaveChannel[0]): ",len(WaveChannel[0]))
+    i += 1;
+    FramesNum = WindowShift
+ 
+    
+  
+print("Koniec czytania pliku .wav")
