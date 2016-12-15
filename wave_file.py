@@ -86,6 +86,7 @@ while True:
     plt.ylabel('Amplitude')
     plt.xlabel('Czestoliwosc [Hz]')
     plt.title('Widmo')
+    plt.ylim(0.0, 1000.0)
     #plt.plot(abs(Spectrum[0]),'r')
     plt.bar(np.arange(N),BarSpectrum[0])
     plt.grid(True)
