@@ -6,6 +6,11 @@ import matplotlib.pyplot as plt
  
  
 def DivideList(Spectrum,N,aggr_func):
+    
+    #metoda na przyspieszenie, pod warunkiem ze szerokosci przedzialow beda takie same
+    if 0==(len(Spectrum)%N):
+        return aggr_func(np.reshape(Spectrum,(N,len(Spectrum)/N)))
+    
     BarRange = len(Spectrum)/N
     BarSpectrum = []
  
@@ -50,14 +55,13 @@ WaveChannel = []
 Spectrum = []
  
 for item in range(WaveParams.nchannels):
-    WaveChannel.append([])
+    WaveChannel.append([0]*WindowLength)
     Spectrum.append([])
     
  
 i=0
-FramesNum = WindowLength
 while True:
-    WaveFrame = WaveObj.readframes(FramesNum)
+    WaveFrame = WaveObj.readframes(WindowShift)
     if not WaveFrame: break
     BarSpectrum = []
     RealFrameNum = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
@@ -93,7 +97,6 @@ while True:
     plt.show()
  
     print("Iter: ",i)
-    print("FramesNum: ",FramesNum)
     print("RealFrameNum: ",RealFrameNum )
     print("len(WaveChannel[0]): ",len(WaveChannel[0]))
     i += 1;
