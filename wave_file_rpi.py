@@ -8,6 +8,14 @@ import spidev
 import RPi.GPIO as GPIO
  
  
+#Zmienne globalne i Nastawy
+SPI_CTX = {}  #zmienna z danymi do obslugi SPI
+FileName = "WaveTest.wav"
+#FileName = "test.wav"
+#FileName = "test4.wav"
+FPS = 16   #FPS-ilosc klatek na sekunde 
+N=8  #N - ilosc kolumn na wykresie spectrum   
+
 def DivideList(Spectrum,N,aggr_func):
     
     #metoda na przyspieszenie, pod warunkiem ze szerokosci przedzialow beda takie same
@@ -29,9 +37,10 @@ def DivideList(Spectrum,N,aggr_func):
     return BarSpectrum
     
 
-OldRange = {'max':1000, 'min':0}
-NewRange = {'max': 8, 'min':0}
+
 def ScaleArray(Array):
+    OldRange = {'max':1000, 'min':0}
+    NewRange = {'max': 8, 'min':0}
     a = (NewRange['min']-NewRange['max'])/(OldRange['min']-OldRange['max'])
     b = NewRange['min'] - a*OldRange['min']
 
@@ -45,10 +54,15 @@ def ScaleArray(Array):
    
     return [int(i) for i in NewArray]
  
-
+#Zapis do MAX7219
+def Max7219Write(spi_ctx,address,data):
+    GPIO.output(spi_ctx['cs_pin'], GPIO.LOW)
+    spi_ctx['dev'].xfer2([address, data])
+    GPIO.output(spi_ctx['cs_pin'], GPIO.HIGH)
+    return
 
  
-#Adresy rejestrow
+#Adresy rejestrow MAX7219
 NO_OP           = 0x0
 REG_DIGIT0      = 0x1
 REG_DIGIT1      = 0x2
@@ -73,18 +87,7 @@ MAX7219_COL   = 8
 #SPI_MOSI = 19
 #SPI_CLK = 23
 SPI_CS = 24    #nie wiem czemu ale w przykladzie bylo 23???
- 
- 
-#zmienna z danymi do obslugi SPI
-SPI_CTX = {}
- 
- 
-#musze to lepiej przemyslec
-def Max7219Write(spi_ctx,address,data):
-    GPIO.output(spi_ctx['cs_pin'], GPIO.LOW)
-    spi_ctx['dev'].xfer2([address, data])
-    GPIO.output(spi_ctx['cs_pin'], GPIO.HIGH)
-    return
+
  
 #GPIO INIT
 GPIO.setmode(GPIO.BCM)
@@ -106,7 +109,7 @@ Max7219Write(SPI_CTX,REG_DECODEMODE,0)
 Max7219Write(SPI_CTX,REG_SCANLIMIT, 7)
 Max7219Write(SPI_CTX,REG_DISPLAYTEST,0)
 Max7219Write(SPI_CTX,REG_SHUTDOWN,1)
-Max7219Write(SPI_CTX,REG_INTENSITY,1)
+Max7219Write(SPI_CTX,REG_INTENSITY,2)
 time.sleep(0.1)
  
 #MAX7219 CLEAN
@@ -118,9 +121,6 @@ for i in range(MAX7219_ROW):
 #    Max7219Write(SPI_CTX,REG_DIGIT0 + i,1<<i)
  
 
-FileName = "WaveTest.wav"
-#FileName = "test.wav"
-#FileName = "test4.wav"
 WaveObj = wave.open(FileName, mode='rb')
  
 print("Channels: ".ljust(25),WaveObj.getnchannels())
@@ -136,33 +136,36 @@ WaveParams = WaveObj.getparams(); #print("Params: ".ljust(25),WaveParams, "\n")
 #.wav file is always Little Endian so we use '<'
 FormatDict = {1:'B',2:'h',4:'i',8:'q'}
  
-#FPS          - ilosc klatek na sekunde 
-#WindowLength - number of frames we need to calculate current spectrum, eqaul to sampling frequency
-#WindowShift  - number of frames over which we will shift our signal in single iteration (half of WindowLength)
+
+#FramesLength - number of frames we need to calculate current spectrum, eqaul to sampling frequency
+#FramesShift  - number of frames over which we will shift our signal in single iteration (half of WindowLength)
 #WaveData     - array of frame tuples from .wav file
-FPS = 16
-WindowLength = WaveParams.framerate
-WindowShift  = math.floor(WaveParams.framerate/FPS)
-WaveData = []
+
+#Chcemy żeby ilosc probek branych do liczenie widma byla wielokrotnoscia
+#liczbt linii na wykresie
+Mod_N = WaveParams.framerate%N
+FramesLength = WaveParams.framerate - Mod_N
+FramesShift  = math.floor(WaveParams.framerate/FPS)
+WaveData    = []
 WaveChannel = []
-Spectrum = []
+Spectrum    = []
  
 for item in range(WaveParams.nchannels):
-    WaveChannel.append([0]*WindowLength)
+    WaveChannel.append([0]*FramesLength)
     Spectrum.append([])
     
  
 i=0
 while True:
-    WaveFrame = WaveObj.readframes(WindowShift)
+    WaveFrame = WaveObj.readframes(FramesShift)
     if not WaveFrame: break
     BarSpectrum = []
-    RealFrameNum = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
-    WaveFrame = struct.unpack('<{n}{t}'.format(n=RealFrameNum*WaveParams.nchannels,t=FormatDict[WaveParams.sampwidth]),WaveFrame)
+    RealFramesLength = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
+    WaveFrame = struct.unpack('<{n}{t}'.format(n=RealFramesLength*WaveParams.nchannels,t=FormatDict[WaveParams.sampwidth]),WaveFrame)
  
     for n in range(WaveParams.nchannels):
         #isolate each channel 
-        WaveChannel[n] = WaveChannel[n][RealFrameNum:]
+        WaveChannel[n] = WaveChannel[n][RealFramesLength:]
         WaveChannel[n].extend([sample for (index,sample) in enumerate(WaveFrame) if (n == (index%WaveParams.nchannels))])
  
         #compute FFT for each channel
@@ -174,7 +177,7 @@ while True:
         #teraz dzielimy nasze spectrum na N przedzialow
         #N - ilosc przedzialow
         #BarRange - ilosc prazakow czestotliwosci przypadajacych na pojedynczy przedzial
-        N=8
+       
         BarSpectrum.append(DivideList(Spectrum[n],N,max))
         BarSpectrum[n] = ScaleArray(np.array(BarSpectrum[n]))
         
@@ -196,7 +199,8 @@ while True:
     print("BarSpectrum[0]): ",BarSpectrum[0])
     for x in range(MAX7219_ROW):
         Max7219Write(SPI_CTX,REG_DIGIT0 + x,2**(BarSpectrum[0][x])-1)
-    i += 1;
+    i += 1
+    break
 
  
     
