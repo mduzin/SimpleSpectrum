@@ -10,33 +10,35 @@ import RPi.GPIO as GPIO
  
 #Zmienne globalne i Nastawy
 SPI_CTX = {}  #zmienna z danymi do obslugi SPI
-FileName = "WaveTest.wav"
-#FileName = "test.wav"
+#FileName = "WaveTest.wav"
+FileName = "test1.wav"
 #FileName = "test4.wav"
 FPS = 16   #FPS-ilosc klatek na sekunde 
 N=8  #N - ilosc kolumn na wykresie spectrum   
 
-def DivideList(Spectrum,N,aggr_func):
-    
-    #metoda na przyspieszenie, pod warunkiem ze szerokosci przedzialow beda takie same
-    #if 0==(len(Spectrum)%N):
-    #   return aggr_func(np.reshape(Spectrum,(N,len(Spectrum)/N)))
-    
-    BarRange = len(Spectrum)/N
-    BarSpectrum = []
- 
-    #czy mozna jakos zoptymalizowac Start i Stop Index'u???
-    StartIndex = 0.0
-    StopIndex = StartIndex + BarRange
-    for x in range(N):
-        BarSpectrum.append(Spectrum[round(StartIndex):round(StopIndex)])
-        StartIndex = StopIndex;
-        StopIndex =  StartIndex + BarRange
- 
-    BarSpectrum = [aggr_func(x) for x in BarSpectrum]
-    return BarSpectrum
-    
+#zmienne pomocnicze
+BAR_WAGES = np.array([128,64,32,16,8,4,2,1]*8).reshape(8,8)
+BAR_ARRAY = np.array([[0,0,0,0,0,0,0,0],
+                      [0,0,0,0,0,0,0,1],
+                      [0,0,0,0,0,0,1,1],
+                      [0,0,0,0,0,1,1,1],
+                      [0,0,0,0,1,1,1,1],
+                      [0,0,0,1,1,1,1,1],
+                      [0,0,1,1,1,1,1,1],
+                      [0,1,1,1,1,1,1,1],
+                      [1,1,1,1,1,1,1,1]])
 
+def PrepareBargraph(Spectrum):
+    Spectrum = np.array(Spectrum,dtype=np.int_)
+    Result = np.vstack((BAR_ARRAY[item] for item in Spectrum))
+    Result = np.transpose(Result)
+    Result = (Result*BAR_WAGES).sum(axis=1)
+    return Result 
+
+def DivideList(Spectrum,N):
+    #metoda na przyspieszenie, pod warunkiem ze szerokosci przedzialow beda takie same
+    Spectrum = np.reshape(Spectrum,(N,Spectrum.size/N))
+    return np.amax(Spectrum, axis=1)  
 
 def ScaleArray(Array):
     OldRange = {'max':1000, 'min':0}
@@ -178,7 +180,7 @@ while True:
         #N - ilosc przedzialow
         #BarRange - ilosc prazakow czestotliwosci przypadajacych na pojedynczy przedzial
        
-        BarSpectrum.append(DivideList(Spectrum[n],N,max))
+        BarSpectrum.append(DivideList(Spectrum[n],N))
         BarSpectrum[n] = ScaleArray(np.array(BarSpectrum[n]))
         
  
@@ -194,13 +196,14 @@ while True:
     #plt.show()
  
     print("Iter: ",i)
-    print("RealFrameNum: ",RealFrameNum )
-    print("len(WaveChannel[0]): ",len(WaveChannel[0]))
-    print("BarSpectrum[0]): ",BarSpectrum[0])
+    #print("RealFramesLength: ", RealFramesLength )
+    #print("len(WaveChannel[0]): ",len(WaveChannel[0]))
+    #print("BarSpectrum[0]): ",BarSpectrum[0])
+    Bargraph = PrepareBargraph(BarSpectrum[0])
     for x in range(MAX7219_ROW):
-        Max7219Write(SPI_CTX,REG_DIGIT0 + x,2**(BarSpectrum[0][x])-1)
+        Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
     i += 1
-    break
+    #break
 
  
     
