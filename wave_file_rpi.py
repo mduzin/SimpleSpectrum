@@ -12,8 +12,8 @@ import RPi.GPIO as GPIO
 SPI_CTX = {}  #zmienna z danymi do obslugi SPI
 #FileName = "WaveTest.wav"
 #FileName = "test1.wav"
-#FileName = "test4.wav"
-FileName = "brx.wav"
+FileName = "test5.wav"
+#FileName = "brx.wav"
 FPS = 16   #FPS-ilosc klatek na sekunde 
 N=8  #N - ilosc kolumn na wykresie spectrum   
 
@@ -164,7 +164,7 @@ while True:
         #BarRange - ilosc prazakow czestotliwosci przypadajacych na pojedynczy przedzial
        
         BarSpectrum.append(DivideList(Spectrum[n],N))
-        BarSpectrum[n] = ScaleSpectrum(np.array(BarSpectrum[n]),1000,8)
+        BarSpectrum[n] = ScaleSpectrum(np.array(BarSpectrum[n]),16000,8)
         
  
     #rysuj/updatuj wykres widma
