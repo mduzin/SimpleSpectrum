@@ -10,9 +10,10 @@ import RPi.GPIO as GPIO
  
 #Zmienne globalne i Nastawy
 SPI_CTX = {}  #zmienna z danymi do obslugi SPI
-FileName = "WaveTest.wav"
+#FileName = "WaveTest.wav"
 #FileName = "test1.wav"
 #FileName = "test4.wav"
+FileName = "brx.wav"
 FPS = 16   #FPS-ilosc klatek na sekunde 
 N=8  #N - ilosc kolumn na wykresie spectrum   
 
@@ -141,6 +142,7 @@ i=0
 while True:
     WaveFrame = WaveObj.readframes(FramesShift)
     if not WaveFrame: break
+    #<TODO:>uzywac numpy
     BarSpectrum = []
     RealFramesLength = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
     WaveFrame = struct.unpack('<{n}{t}'.format(n=RealFramesLength*WaveParams.nchannels,t=FormatDict[WaveParams.sampwidth]),WaveFrame)
@@ -153,6 +155,7 @@ while True:
         #compute FFT for each channel
         WaveChannelLen = len(WaveChannel[n])
         Spectrum[n] = (2/WaveChannelLen)*np.fft.rfft(WaveChannel[n])
+        #<TODO:> Obcinka przy pomocy .delete
         Spectrum[n] = Spectrum[n][:-1]
         Spectrum[n] = abs(Spectrum[n])
  
