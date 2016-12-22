@@ -10,29 +10,18 @@ import RPi.GPIO as GPIO
  
 #Zmienne globalne i Nastawy
 SPI_CTX = {}  #zmienna z danymi do obslugi SPI
-#FileName = "WaveTest.wav"
-FileName = "test1.wav"
+FileName = "WaveTest.wav"
+#FileName = "test1.wav"
 #FileName = "test4.wav"
 FPS = 16   #FPS-ilosc klatek na sekunde 
 N=8  #N - ilosc kolumn na wykresie spectrum   
 
 #zmienne pomocnicze
-BAR_WAGES = np.array([128,64,32,16,8,4,2,1]*8).reshape(8,8)
-BAR_ARRAY = np.array([[0,0,0,0,0,0,0,0],
-                      [0,0,0,0,0,0,0,1],
-                      [0,0,0,0,0,0,1,1],
-                      [0,0,0,0,0,1,1,1],
-                      [0,0,0,0,1,1,1,1],
-                      [0,0,0,1,1,1,1,1],
-                      [0,0,1,1,1,1,1,1],
-                      [0,1,1,1,1,1,1,1],
-                      [1,1,1,1,1,1,1,1]])
+BAR_ARRAY = np.fliplr(np.tril(np.ones((9,8),dtype=np.int),-1))
 
 def PrepareBargraph(Spectrum):
-    Spectrum = np.array(Spectrum,dtype=np.int_)
     Result = np.vstack((BAR_ARRAY[item] for item in Spectrum))
-    Result = np.transpose(Result)
-    Result = (Result*BAR_WAGES).sum(axis=1)
+    Result = np.packbits(Result, axis=0).flatten()
     return Result 
 
 def DivideList(Spectrum,N):
@@ -40,21 +29,12 @@ def DivideList(Spectrum,N):
     Spectrum = np.reshape(Spectrum,(N,Spectrum.size/N))
     return np.amax(Spectrum, axis=1)  
 
-def ScaleArray(Array):
-    OldRange = {'max':1000, 'min':0}
-    NewRange = {'max': 8, 'min':0}
-    a = (NewRange['min']-NewRange['max'])/(OldRange['min']-OldRange['max'])
-    b = NewRange['min'] - a*OldRange['min']
-
-    NewArray = a*Array +b
-
-    for i in range(len(NewArray)):
-        if NewArray[i] > NewRange['max']:
-            NewArray[i] = NewRange['max']
-        if NewArray[i] < NewRange['min']:
-            NewArray[i] = NewRange['min']
-   
-    return [int(i) for i in NewArray]
+def ScaleSpectrum(Spectrum,OldMax,NewMax):
+    #Saturation filter
+    SatSpectrum = np.clip(Spectrum,0,OldMax)
+    #Scale array
+    ScaleSpectrum = np.array(SatSpectrum)
+    return np.around((ScaleSpectrum*NewMax)/OldMax)
  
 #Zapis do MAX7219
 def Max7219Write(spi_ctx,address,data):
@@ -172,8 +152,8 @@ while True:
  
         #compute FFT for each channel
         WaveChannelLen = len(WaveChannel[n])
-        Spectrum[n] = (2/WaveChannelLen)*np.fft.fft(WaveChannel[n])
-        Spectrum[n] = Spectrum[n][:math.floor(WaveChannelLen/2)]
+        Spectrum[n] = (2/WaveChannelLen)*np.fft.rfft(WaveChannel[n])
+        Spectrum[n] = Spectrum[n][:-1]
         Spectrum[n] = abs(Spectrum[n])
  
         #teraz dzielimy nasze spectrum na N przedzialow
@@ -181,7 +161,7 @@ while True:
         #BarRange - ilosc prazakow czestotliwosci przypadajacych na pojedynczy przedzial
        
         BarSpectrum.append(DivideList(Spectrum[n],N))
-        BarSpectrum[n] = ScaleArray(np.array(BarSpectrum[n]))
+        BarSpectrum[n] = ScaleSpectrum(np.array(BarSpectrum[n]),1000,8)
         
  
     #rysuj/updatuj wykres widma
