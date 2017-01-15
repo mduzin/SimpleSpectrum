@@ -27,7 +27,7 @@ def DivideList(Spectrum,N,aggr_func):
  
 #FileName = "WaveTest.wav"
 #FileName = "test.wav"
-FileName = "test4.wav"
+FileName = "test6.wav"
 WaveObj = wave.open(FileName, mode='rb')
  
 print("Channels: ".ljust(25),WaveObj.getnchannels())
@@ -90,7 +90,7 @@ while True:
     plt.ylabel('Amplitude')
     plt.xlabel('Czestoliwosc [Hz]')
     plt.title('Widmo')
-    plt.ylim(0.0, 1000.0)
+    plt.ylim(0.0, 32000.0)
     #plt.plot(abs(Spectrum[0]),'r')
     plt.bar(np.arange(N),BarSpectrum[0])
     plt.grid(True)

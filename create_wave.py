@@ -5,7 +5,7 @@ import struct
 import numpy as np
  
 #nagrywane czestotliwosci
-freq_list = [440.0, 4400.0]
+freq_list = [440.0,2200.0, 4400.0]
  
 #ilosc ramp
 ramp_count = 2

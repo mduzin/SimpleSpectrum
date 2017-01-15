@@ -9,27 +9,41 @@ import RPi.GPIO as GPIO
  
  
 #Zmienne globalne i Nastawy
-SPI_CTX = {}  #zmienna z danymi do obslugi SPI
-#FileName = "WaveTest.wav"
-#FileName = "test1.wav"
-FileName = "test5.wav"
-#FileName = "brx.wav"
+
+#zmienna z danymi do obslugi SPI
+SPI_CTX = {}  
+
+#Plik do analizy
+FileName = "yeah.wav"
+
+#Ilosc klatek na sek do wyswietlenia
 FPS = 16   #FPS-ilosc klatek na sekunde 
-N=8  #N - ilosc kolumn na wykresie spectrum   
+
+#N - ilosc kolumn na wykresie spectrum 
+N = 8    
+
+#H - wyskosc slupka kolumny
+H = 8
+
+#Tablica z wyliczonymi widmami do wyswietlenia
+BarArray = []
 
 #zmienne pomocnicze
-BAR_ARRAY = np.fliplr(np.tril(np.ones((9,8),dtype=np.int),-1))
+BAR_ARRAY = np.fliplr(np.tril(np.ones((H+1,H),dtype=np.int),-1))
 
+#<TODO:> komentarz
 def PrepareBargraph(Spectrum):
     Result = np.vstack((BAR_ARRAY[item] for item in Spectrum))
     Result = np.packbits(Result, axis=0).flatten()
     return Result 
 
+#<TODO:> komentarz    
 def DivideList(Spectrum,N):
     #metoda na przyspieszenie, pod warunkiem ze szerokosci przedzialow beda takie same
     Spectrum = np.reshape(Spectrum,(N,Spectrum.size/N))
     return np.amax(Spectrum, axis=1)  
 
+#<TODO:> komentarz    
 def ScaleSpectrum(Spectrum,OldMax,NewMax):
     #Saturation filter
     SatSpectrum = np.clip(Spectrum,0,OldMax)
@@ -38,6 +52,9 @@ def ScaleSpectrum(Spectrum,OldMax,NewMax):
     return np.around((ScaleSpectrum*NewMax)/OldMax)
  
 #Zapis do MAX7219
+#IN spi_ctx - handle do contextu polaczenia spi
+#IN address - adres rejestru max7219 do ktorego bedziemy pisac
+#IN data    - dane wysylane do rejestru
 def Max7219Write(spi_ctx,address,data):
     GPIO.output(spi_ctx['cs_pin'], GPIO.LOW)
     spi_ctx['dev'].xfer2([address, data])
@@ -126,9 +143,9 @@ FormatDict = {1:'B',2:'h',4:'i',8:'q'}
 
 #Chcemy żeby ilosc probek branych do liczenie widma byla wielokrotnoscia
 #liczbt linii na wykresie
-Mod_N = WaveParams.framerate%N
-FramesLength = WaveParams.framerate - Mod_N
+FramesLength = WaveParams.framerate - WaveParams.framerate%N
 FramesShift  = math.floor(WaveParams.framerate/FPS)
+
 WaveData    = []
 WaveChannel = []
 Spectrum    = []
@@ -140,8 +157,12 @@ for item in range(WaveParams.nchannels):
  
 i=0
 while True:
+    #pobieramy nowe ramki z pliku
     WaveFrame = WaveObj.readframes(FramesShift)
+    
+    #jesli nie ma wiecej ramek to wyjdz z petli
     if not WaveFrame: break
+
     #<TODO:>uzywac numpy
     BarSpectrum = []
     RealFramesLength = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
@@ -164,7 +185,8 @@ while True:
         #BarRange - ilosc prazakow czestotliwosci przypadajacych na pojedynczy przedzial
        
         BarSpectrum.append(DivideList(Spectrum[n],N))
-        BarSpectrum[n] = ScaleSpectrum(np.array(BarSpectrum[n]),16000,8)
+        #<TODO:> Obmyslec lepszy sposob skalowania max'a
+        BarSpectrum[n] = ScaleSpectrum(np.array(BarSpectrum[n]),12000,H)
         
  
     #rysuj/updatuj wykres widma
@@ -182,9 +204,8 @@ while True:
     #print("RealFramesLength: ", RealFramesLength )
     #print("len(WaveChannel[0]): ",len(WaveChannel[0]))
     #print("BarSpectrum[0]): ",BarSpectrum[0])
-    Bargraph = PrepareBargraph(BarSpectrum[0])
-    for x in range(MAX7219_ROW):
-        Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
+
+    BarArray.append(BarSpectrum)
     i += 1
     #break
 
@@ -192,6 +213,13 @@ while True:
     
   
 print("Koniec czytania pliku .wav")
+
+#wyswietlanie sceptrum    
+for item in BarArray:
+    Bargraph = PrepareBargraph(item[0])
+    for x in range(MAX7219_ROW):
+        Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
+
 #End of script
 GPIO.cleanup()
 print("Koniec skryptu")
