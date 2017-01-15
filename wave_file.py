@@ -27,7 +27,7 @@ def DivideList(Spectrum,N,aggr_func):
  
 #FileName = "WaveTest.wav"
 #FileName = "test.wav"
-FileName = "test6.wav"
+FileName = "yeah.wav"
 WaveObj = wave.open(FileName, mode='rb')
  
 print("Channels: ".ljust(25),WaveObj.getnchannels())
@@ -47,7 +47,7 @@ FormatDict = {1:'B',2:'h',4:'i',8:'q'}
 #WindowLength - number of frames we need to calculate current spectrum, eqaul to sampling frequency
 #WindowShift  - number of frames over which we will shift our signal in single iteration (half of WindowLength)
 #WaveData     - array of frame tuples from .wav file
-FPS = 27
+FPS = 23
 WindowLength = WaveParams.framerate
 WindowShift  = math.floor(WaveParams.framerate/FPS)
 WaveData = []
@@ -81,7 +81,7 @@ while True:
         #teraz dzielimy nasze spectrum na N przedzialow
         #N - ilosc przedzialow
         #BarRange - ilosc prazakow czestotliwosci przypadajacych na pojedynczy przedzial
-        N=16
+        N=8
         BarSpectrum.append(DivideList(Spectrum[n],N,max))
         
  
@@ -90,7 +90,7 @@ while True:
     plt.ylabel('Amplitude')
     plt.xlabel('Czestoliwosc [Hz]')
     plt.title('Widmo')
-    plt.ylim(0.0, 32000.0)
+    plt.ylim(0.0, 6000.0)
     #plt.plot(abs(Spectrum[0]),'r')
     plt.bar(np.arange(N),BarSpectrum[0])
     plt.grid(True)

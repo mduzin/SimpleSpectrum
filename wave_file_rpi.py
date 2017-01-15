@@ -14,7 +14,7 @@ import RPi.GPIO as GPIO
 SPI_CTX = {}  
 
 #Plik do analizy
-FileName = "yeah.wav"
+FileName = "test6.wav"
 
 #Ilosc klatek na sek do wyswietlenia
 FPS = 16   #FPS-ilosc klatek na sekunde 
@@ -168,8 +168,17 @@ while True:
     RealFramesLength = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
     WaveFrame = struct.unpack('<{n}{t}'.format(n=RealFramesLength*WaveParams.nchannels,t=FormatDict[WaveParams.sampwidth]),WaveFrame)
  
+    #Flow:
+    #1. stworz macierz numpy na ramki (inicuj zerami)    
+    #2. odczyt nowej porcji danych tak jak jest: WaveFrame = WaveObj.readframes(FramesShift)
+    #3. usun przestarzale ramki z poczatku .delete
+    #4. dodanie odczytanej macierzy numpy z ramkami .append
+    #5. rozdzial na kanalay .reshape
+    #6. obliczanie rfft
+    
     for n in range(WaveParams.nchannels):
         #isolate each channel 
+        #<TODO:> use numpy reshape
         WaveChannel[n] = WaveChannel[n][RealFramesLength:]
         WaveChannel[n].extend([sample for (index,sample) in enumerate(WaveFrame) if (n == (index%WaveParams.nchannels))])
  
