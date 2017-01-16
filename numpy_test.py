@@ -13,3 +13,11 @@ a = [1,2,3,4,5,6,7,8]
 np_a = np.array(a).reshape((-1,2))
 
 print(np_a)
+
+
+np_b = np.arange(10)
+print(np_b)
+
+np_b = np.delete(np_b, np.s_[:2], None)
+
+print(np_b)

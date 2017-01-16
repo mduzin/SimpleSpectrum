@@ -139,17 +139,15 @@ FormatDict = {1:'B',2:'h',4:'i',8:'q'}
 
 #FramesLength - number of frames we need to calculate current spectrum, eqaul to sampling frequency
 #FramesShift  - number of frames over which we will shift our signal in single iteration (half of WindowLength)
-#WaveData     - array of frame tuples from .wav file
+#WaveData     - array of frames from .wav file
 
-#Chcemy żeby ilosc probek branych do liczenie widma byla wielokrotnoscia
-#liczbt linii na wykresie
+#Chcemy żeby ilosc probek branych do liczenie widma byla wielokrotnoscia ilosci linii na wykresie
 FramesLength = WaveParams.framerate - WaveParams.framerate%N
 FramesShift  = math.floor(WaveParams.framerate/FPS)
+WaveData     = np.zeros(FramesLength)
 
-WaveData    = []
 WaveChannel = []
 Spectrum    = []
- 
 for item in range(WaveParams.nchannels):
     WaveChannel.append([0]*FramesLength)
     Spectrum.append([])
@@ -164,24 +162,30 @@ while True:
     if not WaveFrame: break
 
     #<TODO:>uzywac numpy
-    BarSpectrum = []
     RealFramesLength = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
     WaveFrame = struct.unpack('<{n}{t}'.format(n=RealFramesLength*WaveParams.nchannels,t=FormatDict[WaveParams.sampwidth]),WaveFrame)
- 
+    WaveData = np.delete(WaveData, np.s_[:len(WaveFrame)], None)    
+    WaveData = np.append(WaveData,WaveFrame)
+    WaveChannel = np.array(WaveData).reshape((-1,WaveParams.nchannels)).transpose()
+    
+    
+    BarSpectrum = []
+    
     #Flow:
-    #1. stworz macierz numpy na ramki (inicuj zerami)    
-    #2. odczyt nowej porcji danych tak jak jest: WaveFrame = WaveObj.readframes(FramesShift)
-    #3. usun przestarzale ramki z poczatku .delete
-    #4. dodanie odczytanej macierzy numpy z ramkami .append
-    #5. rozdzial na kanalay .reshape
-    #6. obliczanie rfft
+    #1. stworz macierz numpy na ramki (inicuj zerami) DONE 
+    #2. odczyt nowej porcji danych tak jak jest: WaveFrame = WaveObj.readframes(FramesShift)DONE
+    #3. usun przestarzale ramki z poczatku .delete DONE
+    #4. dodanie odczytanej macierzy numpy z ramkami .append DONE
+    #5. rozdzial na kanalay .reshape DONE
+    #6. obliczanie rfft DONE
     
     for n in range(WaveParams.nchannels):
         #isolate each channel 
         #<TODO:> use numpy reshape
-        WaveChannel[n] = WaveChannel[n][RealFramesLength:]
-        WaveChannel[n].extend([sample for (index,sample) in enumerate(WaveFrame) if (n == (index%WaveParams.nchannels))])
+        #WaveChannel[n] = WaveChannel[n][RealFramesLength:]
+        #WaveChannel[n].extend([sample for (index,sample) in enumerate(WaveFrame) if (n == (index%WaveParams.nchannels))])
  
+        
         #compute FFT for each channel
         WaveChannelLen = len(WaveChannel[n])
         Spectrum[n] = (2/WaveChannelLen)*np.fft.rfft(WaveChannel[n])

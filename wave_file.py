@@ -66,7 +66,8 @@ while True:
     BarSpectrum = []
     RealFrameNum = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
     WaveFrame = struct.unpack('<{n}{t}'.format(n=RealFrameNum*WaveParams.nchannels,t=FormatDict[WaveParams.sampwidth]),WaveFrame)
- 
+    print(WaveFrame)
+    
     for n in range(WaveParams.nchannels):
         #isolate each channel 
         WaveChannel[n] = WaveChannel[n][RealFrameNum:]
@@ -101,7 +102,8 @@ while True:
     print("len(WaveChannel[0]): ",len(WaveChannel[0]))
     i += 1;
     FramesNum = WindowShift
- 
+    break
+    
     
   
 print("Koniec czytania pliku .wav")
