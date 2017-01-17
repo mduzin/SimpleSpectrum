@@ -146,11 +146,6 @@ FramesLength = WaveParams.framerate - WaveParams.framerate%N
 FramesShift  = math.floor(WaveParams.framerate/FPS)
 WaveData     = np.zeros(FramesLength)
 
-WaveChannel = []
-Spectrum    = []
-for item in range(WaveParams.nchannels):
-    WaveChannel.append([0]*FramesLength)
-    Spectrum.append([])
     
  
 i=0
@@ -161,16 +156,6 @@ while True:
     #jesli nie ma wiecej ramek to wyjdz z petli
     if not WaveFrame: break
 
-    #<TODO:>uzywac numpy
-    RealFramesLength = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
-    WaveFrame = struct.unpack('<{n}{t}'.format(n=RealFramesLength*WaveParams.nchannels,t=FormatDict[WaveParams.sampwidth]),WaveFrame)
-    WaveData = np.delete(WaveData, np.s_[:len(WaveFrame)], None)    
-    WaveData = np.append(WaveData,WaveFrame)
-    WaveChannel = np.array(WaveData).reshape((-1,WaveParams.nchannels)).transpose()
-    
-    
-    BarSpectrum = []
-    
     #Flow:
     #1. stworz macierz numpy na ramki (inicuj zerami) DONE 
     #2. odczyt nowej porcji danych tak jak jest: WaveFrame = WaveObj.readframes(FramesShift)DONE
@@ -178,47 +163,36 @@ while True:
     #4. dodanie odczytanej macierzy numpy z ramkami .append DONE
     #5. rozdzial na kanalay .reshape DONE
     #6. obliczanie rfft DONE
+    RealFramesLength = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
+    WaveFrame = struct.unpack('<{n}{t}'.format(n=RealFramesLength*WaveParams.nchannels,t=FormatDict[WaveParams.sampwidth]),WaveFrame)
+    WaveData = np.delete(WaveData, np.s_[:len(WaveFrame)], None)    
+    WaveData = np.append(WaveData,WaveFrame)
+    WaveChannel = np.array(WaveData).reshape((-1,WaveParams.nchannels)).transpose()
     
-    for n in range(WaveParams.nchannels):
-        #isolate each channel 
-        #<TODO:> use numpy reshape
-        #WaveChannel[n] = WaveChannel[n][RealFramesLength:]
-        #WaveChannel[n].extend([sample for (index,sample) in enumerate(WaveFrame) if (n == (index%WaveParams.nchannels))])
- 
-        
-        #compute FFT for each channel
-        WaveChannelLen = len(WaveChannel[n])
-        Spectrum[n] = (2/WaveChannelLen)*np.fft.rfft(WaveChannel[n])
-        #<TODO:> Obcinka przy pomocy .delete
-        Spectrum[n] = Spectrum[n][:-1]
-        Spectrum[n] = abs(Spectrum[n])
- 
-        #teraz dzielimy nasze spectrum na N przedzialow
-        #N - ilosc przedzialow
-        #BarRange - ilosc prazakow czestotliwosci przypadajacych na pojedynczy przedzial
+    
+    #liczymy rfft tylko dla kanalu 0
+    WaveChannelLen = len(WaveChannel[0])
+    Spectrum = (2/WaveChannelLen)*np.fft.rfft(WaveChannel[0])
+    Spectrum = np.delete(Spectrum, -1, None)
+    Spectrum = np.absolute(Spectrum)
+    
+    #teraz dzielimy nasze spectrum na N przedzialow
+    #N - ilosc przedzialow
+    #BarRange - ilosc prazakow czestotliwosci przypadajacych na pojedynczy przedzial
        
-        BarSpectrum.append(DivideList(Spectrum[n],N))
-        #<TODO:> Obmyslec lepszy sposob skalowania max'a
-        BarSpectrum[n] = ScaleSpectrum(np.array(BarSpectrum[n]),12000,H)
-        
- 
-    #rysuj/updatuj wykres widma
-    #plt.figure(1)
-    #plt.ylabel('Amplitude')
-    #plt.xlabel('Czestoliwosc [Hz]')
-    #plt.title('Widmo')
-    #plt.ylim(0.0, 1000.0)
-    #plt.plot(abs(Spectrum[0]),'r')
-    #plt.bar(np.arange(N),BarSpectrum[0])
-    #plt.grid(True)
-    #plt.show()
+    Spectrum = DivideList(Spectrum,N)
+    Spectrum = ScaleSpectrum(Spectrum,12000,H)
+    Bargraph = PrepareBargraph(Spectrum)
+    #<TODO:> Obmyslec lepszy sposob skalowania max'a
+    for x in range(MAX7219_ROW):
+        Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
+       
  
     print("Iter: ",i)
-    #print("RealFramesLength: ", RealFramesLength )
-    #print("len(WaveChannel[0]): ",len(WaveChannel[0]))
-    #print("BarSpectrum[0]): ",BarSpectrum[0])
+    print("Spectrum: ",Spectrum)
+    
 
-    BarArray.append(BarSpectrum)
+    #BarArray.append(BarSpectrum)
     i += 1
     #break
 
@@ -228,10 +202,10 @@ while True:
 print("Koniec czytania pliku .wav")
 
 #wyswietlanie sceptrum    
-for item in BarArray:
-    Bargraph = PrepareBargraph(item[0])
-    for x in range(MAX7219_ROW):
-        Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
+#for item in BarArray:
+#    Bargraph = PrepareBargraph(item[0])
+#    for x in range(MAX7219_ROW):
+#        Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
 
 #End of script
 GPIO.cleanup()
