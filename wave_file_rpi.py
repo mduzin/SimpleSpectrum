@@ -14,8 +14,9 @@ import RPi.GPIO as GPIO
 SPI_CTX = {}  
 
 #Plik do analizy
-FileName = "yeah.wav"
+#FileName = "yeah.wav"
 #FileName = "test6.wav"
+FileName = "vega.wav"
 
 #Ilosc klatek na sek do wyswietlenia
 FPS = 16   #FPS-ilosc klatek na sekunde 
@@ -85,8 +86,8 @@ MAX7219_ROW   = 8
 MAX7219_COL   = 8
  
 #Numery pinow SPI
-#SPI_MOSI = 19
-#SPI_CLK = 23
+SPI_MOSI = 19
+SPI_CLK = 23
 SPI_CS = 24    #nie wiem czemu ale w przykladzie bylo 23???
 
  
@@ -116,11 +117,7 @@ time.sleep(0.1)
 #MAX7219 CLEAN
 for i in range(MAX7219_ROW):
     Max7219Write(SPI_CTX,REG_DIGIT0 + i,0)
- 
-#MAX7219 TEST
-#for i in range(MAX7219_ROW):
-#    Max7219Write(SPI_CTX,REG_DIGIT0 + i,1<<i)
- 
+
 
 WaveObj = wave.open(FileName, mode='rb')
  
@@ -146,7 +143,6 @@ FormatDict = {1:'B',2:'h',4:'i',8:'q'}
 FramesLength = WaveParams.framerate - WaveParams.framerate%N
 FramesShift  = math.floor(WaveParams.framerate/FPS)
 WaveData     = np.zeros(FramesLength)
-
     
  
 i=0
@@ -166,37 +162,32 @@ while True:
     #6. obliczanie rfft DONE
     RealFramesLength = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
     WaveFrame = struct.unpack('<{n}{t}'.format(n=RealFramesLength*WaveParams.nchannels,t=FormatDict[WaveParams.sampwidth]),WaveFrame)
-    WaveData = np.delete(WaveData, np.s_[:len(WaveFrame)], None)    
+    WaveData = np.delete(WaveData, np.s_[0:len(WaveFrame)], None)    
     WaveData = np.append(WaveData,WaveFrame)
     WaveChannel = np.array(WaveData).reshape(-1,WaveParams.nchannels)
     
     
-    #liczymy rfft tylko dla kanalu 0
-    #WaveChannelLen = len(WaveChannel[0])
-    #Spectrum = (2/WaveChannelLen)*np.fft.rfft(WaveChannel[0])
+    #liczymy rfft tylko wszystkich kanalow
     Spectrum = np.absolute(np.fft.rfft(WaveChannel,axis=0))
     Spectrum = (2/(Spectrum.size/WaveParams.nchannels))*Spectrum
-    #nie wiem po co było to usuwanie ostatniego elementu
-    Spectrum = np.sum(np.delete(Spectrum, -1, 0),axis=1)
+    #nie wiem po co było to usuwanie ostatniego elementu(po nic tylko po to by ilosc ramek sie ladnie dzielila)
+    Spectrum = np.sum(np.delete(Spectrum, 0, 0),axis=1)
    
     
     #teraz dzielimy nasze spectrum na N przedzialow
     #N - ilosc przedzialow
-    #BarRange - ilosc prazakow czestotliwosci przypadajacych na pojedynczy przedzial
-       
+          
     Spectrum = DivideList(Spectrum,N)
-    Spectrum = ScaleSpectrum(Spectrum,1000,H)
-    Bargraph = PrepareBargraph(Spectrum)
     #<TODO:> Obmyslec lepszy sposob skalowania max'a
+    Spectrum = ScaleSpectrum(Spectrum,100,H)
+    Bargraph = PrepareBargraph(Spectrum)
+   
     for x in range(MAX7219_ROW):
         Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
        
  
     print("Iter: ",i)
     #print("Spectrum: ",Spectrum)
-    
-
-    #BarArray.append(BarSpectrum)
     i += 1
     #break
 
@@ -204,12 +195,6 @@ while True:
     
   
 print("Koniec czytania pliku .wav")
-
-#wyswietlanie sceptrum    
-#for item in BarArray:
-#    Bargraph = PrepareBargraph(item[0])
-#    for x in range(MAX7219_ROW):
-#        Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
 
 #End of script
 GPIO.cleanup()
