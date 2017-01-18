@@ -27,7 +27,8 @@ def DivideList(Spectrum,N,aggr_func):
  
 #FileName = "WaveTest.wav"
 #FileName = "test.wav"
-FileName = "yeah.wav"
+#FileName = "yeah.wav"
+FileName = "vega.wav"
 WaveObj = wave.open(FileName, mode='rb')
  
 print("Channels: ".ljust(25),WaveObj.getnchannels())
@@ -102,7 +103,7 @@ while True:
     print("len(WaveChannel[0]): ",len(WaveChannel[0]))
     i += 1;
     FramesNum = WindowShift
-    break
+    #break
     
     
   

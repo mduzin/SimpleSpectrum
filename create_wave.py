@@ -8,10 +8,10 @@ import numpy as np
 freq_list = [440.0,2200.0, 4400.0]
  
 #ilosc ramp
-ramp_count = 2
+ramp_count = 10
  
 #ile czasu ma trwac nagranie[s]
-rec_length = 5
+rec_length = 30
  
 #nazwa pliku
 fname = "test6.wav"
