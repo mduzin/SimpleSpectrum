@@ -29,3 +29,17 @@ print(np_b)
 np_a = np.delete(np_a, -1, 1)
 
 print(np_a)
+
+a = np.array([1,2,3,4,3,2,1,0])
+b = np.array([1,2,3,4,3,2,1,0])
+c = np.array([1,2,3,4,3,2,1,0])
+d = np.array([1,2,3,4,3,2,1,0])
+
+
+np_c = np.array([1,1,2,2,3,3,4,4,5,5,6,6]).reshape(-1,1)
+print(np_c)
+
+np_rfft =  np.absolute(np.fft.rfft(np_c,axis=0))
+np_rfft =  np.delete(np_rfft, -1, 0)
+np_rfft =  np.sum(np_rfft,axis=1)
+print(np_rfft)
