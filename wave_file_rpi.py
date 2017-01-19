@@ -169,8 +169,8 @@ while True:
     
     #liczymy rfft tylko wszystkich kanalow
     Spectrum = np.absolute(np.fft.rfft(WaveChannel,axis=0))
-    Spectrum = (2/(Spectrum.size/WaveParams.nchannels))*Spectrum
     #nie wiem po co było to usuwanie ostatniego elementu(po nic tylko po to by ilosc ramek sie ladnie dzielila)
+    # ja usuwam pierwsza probke czyli 0Hz
     Spectrum = np.sum(np.delete(Spectrum, 0, 0),axis=1)
    
     
