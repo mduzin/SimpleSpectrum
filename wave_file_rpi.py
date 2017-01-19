@@ -166,20 +166,23 @@ while True:
     WaveData = np.append(WaveData,WaveFrame)
     WaveChannel = np.array(WaveData).reshape(-1,WaveParams.nchannels)
     
-    
-    #liczymy rfft tylko wszystkich kanalow
+    WaveChannel = np.delete(WaveChannel,-1,1) 
+    #liczymy rfft dla wszystkich kanalow
+    #<TODO:> obliczac tylko jeden kanal jesli ma byc realtime
     Spectrum = np.absolute(np.fft.rfft(WaveChannel,axis=0))
     #nie wiem po co było to usuwanie ostatniego elementu(po nic tylko po to by ilosc ramek sie ladnie dzielila)
     # ja usuwam pierwsza probke czyli 0Hz
     Spectrum = np.sum(np.delete(Spectrum, 0, 0),axis=1)
-   
+    #przejscie na decybele
+    Spectrum = np.log10(Spectrum)
     
     #teraz dzielimy nasze spectrum na N przedzialow
     #N - ilosc przedzialow
           
     Spectrum = DivideList(Spectrum,N)
     #<TODO:> Obmyslec lepszy sposob skalowania max'a
-    Spectrum = ScaleSpectrum(Spectrum,100,H)
+    #Spectrum = ScaleSpectrum(Spectrum,5,H)
+    #tu jest potencjalnie jakis sporadical
     Bargraph = PrepareBargraph(Spectrum)
    
     for x in range(MAX7219_ROW):
@@ -187,7 +190,7 @@ while True:
        
  
     print("Iter: ",i)
-    #print("Spectrum: ",Spectrum)
+    print("Spectrum: ",Spectrum)
     i += 1
     #break
 
