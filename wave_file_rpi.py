@@ -19,7 +19,7 @@ SPI_CTX = {}
 FileName = "vega.wav"
 
 #Ilosc klatek na sek do wyswietlenia
-FPS = 16   #FPS-ilosc klatek na sekunde 
+FPS = 23   #FPS-ilosc klatek na sekunde 
 
 #N - ilosc kolumn na wykresie spectrum 
 N = 8    

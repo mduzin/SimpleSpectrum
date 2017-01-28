@@ -20,7 +20,7 @@ FileName = "vega.wav"
 FPS = 16   #FPS-ilosc klatek na sekunde 
 
 #N - ilosc kolumn na wykresie spectrum 
-N = 8    
+N = 16    
 
 #H - wyskosc slupka kolumny
 H = 8
@@ -115,18 +115,18 @@ while True:
     Spectrum = DivideList(Spectrum,N)
     #<TODO:> Obmyslec lepszy sposob skalowania max'a
     #Spectrum = ScaleSpectrum(Spectrum,5,H)
-    Bargraph = PrepareBargraph(Spectrum)
+    #Bargraph = PrepareBargraph(Spectrum)
 
     #rysuj/updatuj wykres widma
-    plt.figure(1)
-    plt.ylabel('Amplitude')
-    plt.xlabel('Czestoliwosc [Hz]')
-    plt.title('Widmo')
-    plt.ylim(0.0, 8.0)
+    #plt.figure(1)
+    #plt.ylabel('Amplitude')
+    #plt.xlabel('Czestoliwosc [Hz]')
+    #plt.title('Widmo')
+    #plt.ylim(0.0, 8.0)
     #plt.plot(abs(Spectrum[0]),'r')
-    plt.bar(np.arange(N),Spectrum)
-    plt.grid(True)
-    plt.show() 
+    #plt.bar(np.arange(N),Spectrum)
+    #plt.grid(True)
+    #plt.show() 
  
     print("Iter: ",i)
     #print("Spectrum: ",Spectrum)
