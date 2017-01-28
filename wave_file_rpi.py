@@ -2,16 +2,11 @@ import wave
 import struct
 import math
 import numpy as np
-#import matplotlib.pyplot as plt
-import time
-import spidev
-import RPi.GPIO as GPIO
+import matrix7219
  
  
 #Zmienne globalne i Nastawy
 
-#zmienna z danymi do obslugi SPI
-SPI_CTX = {}  
 
 #Plik do analizy
 #FileName = "yeah.wav"
@@ -22,7 +17,7 @@ FileName = "vega.wav"
 FPS = 23   #FPS-ilosc klatek na sekunde 
 
 #N - ilosc kolumn na wykresie spectrum 
-N = 8    
+N = 16    
 
 #H - wyskosc slupka kolumny
 H = 8
@@ -53,71 +48,10 @@ def ScaleSpectrum(Spectrum,OldMax,NewMax):
     ScaleSpectrum = np.array(SatSpectrum)
     return np.around((ScaleSpectrum*NewMax)/OldMax)
  
-#Zapis do MAX7219
-#IN spi_ctx - handle do contextu polaczenia spi
-#IN address - adres rejestru max7219 do ktorego bedziemy pisac
-#IN data    - dane wysylane do rejestru
-def Max7219Write(spi_ctx,address,data):
-    GPIO.output(spi_ctx['cs_pin'], GPIO.LOW)
-    spi_ctx['dev'].xfer2([address, data])
-    GPIO.output(spi_ctx['cs_pin'], GPIO.HIGH)
-    return
 
- 
-#Adresy rejestrow MAX7219
-NO_OP           = 0x0
-REG_DIGIT0      = 0x1
-REG_DIGIT1      = 0x2
-REG_DIGIT2      = 0x3
-REG_DIGIT3      = 0x4
-REG_DIGIT4      = 0x5
-REG_DIGIT5      = 0x6
-REG_DIGIT6      = 0x7
-REG_DIGIT7      = 0x8
-REG_DECODEMODE  = 0x9
-REG_INTENSITY   = 0xA
-REG_SCANLIMIT   = 0xB
-REG_SHUTDOWN    = 0xC
-REG_DISPLAYTEST = 0xF
- 
-#ilosc ukladow w kaskadzie
-MAX7219_COUNT = 2
-MAX7219_ROW   = 8
-MAX7219_COL   = 8
- 
-#Numery pinow SPI
-SPI_MOSI = 19
-SPI_CLK = 23
-SPI_CS = 24    #nie wiem czemu ale w przykladzie bylo 23???
-
- 
-#GPIO INIT
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(SPI_CS, GPIO.OUT)
-GPIO.output(SPI_CS, GPIO.HIGH)
-time.sleep(0.1)
- 
-#SPI CTX INIT
-SPI_CTX['dev'] = spidev.SpiDev()
-SPI_CTX['dev'].open(0, 0)
-SPI_CTX['dev'].mode = 3
-SPI_CTX['dev'].max_speed_hz = 1000000
-SPI_CTX['cs_pin'] = SPI_CS
-time.sleep(0.1)
- 
-#MAX7219 INIT
-#<TODO:> Pamietaj ze mamy dwa wyswietlacze
-Max7219Write(SPI_CTX,REG_DECODEMODE,0)
-Max7219Write(SPI_CTX,REG_SCANLIMIT, 7)
-Max7219Write(SPI_CTX,REG_DISPLAYTEST,0)
-Max7219Write(SPI_CTX,REG_SHUTDOWN,1)
-Max7219Write(SPI_CTX,REG_INTENSITY,2)
-time.sleep(0.1)
- 
-#MAX7219 CLEAN
-for i in range(MAX7219_ROW):
-    Max7219Write(SPI_CTX,REG_DIGIT0 + i,0)
-
+MATRIX_CTX = matrix7219.Matrix7219Open(n=2)
+matrix7219.Matrix7219Init(MATRIX_CTX)
+matrix7219.Matrix7219Clean(MATRIX_CTX)
 
 WaveObj = wave.open(FileName, mode='rb')
  
@@ -185,8 +119,8 @@ while True:
     #tu jest potencjalnie jakis sporadical
     Bargraph = PrepareBargraph(Spectrum)
    
-    for x in range(MAX7219_ROW):
-        Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
+    #for x in range(MAX7219_ROW):
+    #    Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
        
  
     print("Iter: ",i)
@@ -200,5 +134,5 @@ while True:
 print("Koniec czytania pliku .wav")
 
 #End of script
-GPIO.cleanup()
+matrix7219.Matrix7219Close()
 print("Koniec skryptu")
