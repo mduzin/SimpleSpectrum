@@ -39,15 +39,23 @@ SPI_CS   = 24    #nie wiem czemu ale w przykladzie bylo 23???
 
 #zmienna z danymi do obslugi SPI
 SPI_CTX = {}  
+#SPI CTX INIT
+SPI_CTX['dev'] = spidev.SpiDev()
+SPI_CTX['dev'].open(0, 0)
+SPI_CTX['dev'].mode = 3
+SPI_CTX['dev'].max_speed_hz = 1000000
+SPI_CTX['cs_pin'] = SPI_CS
+time.sleep(0.1)
+
 
 #Zapis do MAX7219
 #IN spi_ctx - handle do contextu polaczenia spi
 #IN address - adres rejestru max7219 do ktorego bedziemy pisac
 #IN data    - dane wysylane do rejestru
-def Max7219Write(spi_ctx,address,data):
-    GPIO.output(spi_ctx['cs_pin'], GPIO.LOW)
-    spi_ctx['dev'].xfer2([address, data])
-    GPIO.output(spi_ctx['cs_pin'], GPIO.HIGH)
+def Max7219Write(address,data):
+    GPIO.output(SPI_CTX['cs_pin'], GPIO.LOW)
+    SPI_CTX['dev'].xfer2([address, data])
+    GPIO.output(SPI_CTX['cs_pin'], GPIO.HIGH)
     return
 
 #Zapis do Matrix max7219
@@ -56,16 +64,16 @@ def Max7219Write(spi_ctx,address,data):
 #odpowiedni format i dlugosc w formacie: 
 #data_arr = [addr1,data1,adddr2,data2,addr3,data3...] 
 #ilosc sekwencji addrX,dataX musi byc rowna ilosci wyswietlaczy 'n'
-def Matrix7219Write(spi_ctx,data_arr):
-    GPIO.output(spi_ctx['cs_pin'], GPIO.LOW)
-    spi_ctx['dev'].xfer2(data_arr)
-    GPIO.output(spi_ctx['cs_pin'], GPIO.HIGH)
+def Matrix7219Write(data_arr):
+    GPIO.output(SPI_CTX['cs_pin'], GPIO.LOW)
+    SPI_CTX['dev'].xfer2(data_arr)
+    GPIO.output(SPI_CTX['cs_pin'], GPIO.HIGH)
     return    
     
 #<TODO:> wysylanie par danych z data_chain [addr,data] po kolei 
 #do wszystkich modulow spietych szeregow
 #nalezy dolozyc wpisy no_op na koncu
-def Matrix7219WriteChain(spi_ctx,data_chain):
+def Matrix7219WriteChain(data_chain):
     return  
     
 #inicjalizacja SPI na Rpi
@@ -93,7 +101,7 @@ def InitGpio():
 def Matrix7219Open(n=2):
     MATRIX_7219_CTX = {}
     MATRIX_7219_CTX['n'] = n
-    InitSpiCtx()
+    #InitSpiCtx()
     InitGpio()
     return MATRIX_7219_CTX
 
@@ -105,7 +113,7 @@ def Matrix7219Init(matrix_7219_ctx):
                   [REG_SHUTDOWN,1],
                   [REG_INTENSITY,2]]
     for item in InitValues:
-        Matrix7219Write(SPI_CTX,item*matrix_7219_ctx['n'])
+        Matrix7219Write(item*matrix_7219_ctx['n'])
     time.sleep(0.1)
     return
     
@@ -113,7 +121,7 @@ def Matrix7219Init(matrix_7219_ctx):
 #Matrix max7219 clean up
 def Matrix7219Clean(matrix_7219_ctx):
     for i in range(MAX7219_ROW):
-        Matrix7219Write(SPI_CTX,[REG_DIGIT0 + i,0]*matrix_7219_ctx['n'])
+        Matrix7219Write([REG_DIGIT0 + i,0]*matrix_7219_ctx['n'])
     return
     
     

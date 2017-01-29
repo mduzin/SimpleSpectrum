@@ -28,6 +28,17 @@ BarArray = []
 #zmienne pomocnicze
 BAR_ARRAY = np.fliplr(np.tril(np.ones((H+1,H),dtype=np.int),-1))
 
+def SendBargraphToMatrix(Bargraph):
+    print(Bargraph)
+    for x in range(MAX7219_ROW):
+    #<TODO:>
+    #musimy stworzyc data_arr
+    #wpierw porownac z tym co zostalo wyslane w poprzedniej iteracji
+    #jezeli obraz dla danego wyswietlacza (czy nawet wiersza) nie zmienil sie
+    #to nic nie wysylaj, albo wyslij no_op jesli w choc w jednym z wyswietlaczy cos sie zmienilo
+    #Matrix7219Write([REG_DIGIT0+x,i] for i in Bargraph[x]):
+    return
+
 #<TODO:> komentarz
 def PrepareBargraph(Spectrum,n=1):
     #wpierw musimy podzielic Spectrum na n wyswietlaczy
@@ -127,13 +138,13 @@ while True:
     
     #tu jest potencjalnie jakis sporadical
     Bargraph = PrepareBargraph(np.around(Spectrum,0).astype(int),2)
-   
+    SendBargraphToMatrix(Bargraph)
     #for x in range(MAX7219_ROW):
     #    Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
        
  
     print("Iter: ",i)
-    print("Spectrum: ",Spectrum)
+    #print("Spectrum: ",Spectrum)
     i += 1
     #break
 
