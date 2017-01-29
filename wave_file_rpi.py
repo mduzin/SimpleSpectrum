@@ -29,17 +29,24 @@ BarArray = []
 BAR_ARRAY = np.fliplr(np.tril(np.ones((H+1,H),dtype=np.int),-1))
 
 #<TODO:> komentarz
-def PrepareBargraph(Spectrum):
-    Result = np.vstack((BAR_ARRAY[item] for item in Spectrum))
-    Result = np.packbits(Result, axis=0).flatten()
-    return Result 
+def PrepareBargraph(Spectrum,n=1):
+    #wpierw musimy podzielic Spectrum na n wyswietlaczy
+    Spectrum = Spectrum.reshape(n,-1) 
+    Result = []
+    for max7219bars in Spectrum:
+        Bars = np.vstack((BAR_ARRAY[item] for item in max7219bars))
+        Bars = np.packbits(Bars, axis=0).flatten()
+        Result.append(Bars)
+    return np.array(Result)
 
-#<TODO:> komentarz    
+#Dzieli przeslana liste na N podlist, pod warunkiem że sa one podzielne przez N
 def DivideList(Spectrum,N):
     #metoda na przyspieszenie, pod warunkiem ze szerokosci przedzialow beda takie same
-    Spectrum = np.reshape(Spectrum,(N,Spectrum.size/N))
-    return np.amax(Spectrum, axis=1)  
-
+    if 0==(Spectrum.size%N):
+        Spectrum = np.reshape(Spectrum,(N,Spectrum.size//N))
+        return np.amax(Spectrum, axis=1)  
+  
+        
 #<TODO:> komentarz    
 def ScaleSpectrum(Spectrum,OldMax,NewMax):
     #Saturation filter
@@ -100,12 +107,10 @@ while True:
     WaveData = np.append(WaveData,WaveFrame)
     WaveChannel = np.array(WaveData).reshape(-1,WaveParams.nchannels)
     
-    WaveChannel = np.delete(WaveChannel,-1,1) 
     #liczymy rfft dla wszystkich kanalow
-    #<TODO:> obliczac tylko jeden kanal jesli ma byc realtime
     Spectrum = np.absolute(np.fft.rfft(WaveChannel,axis=0))
-    #nie wiem po co było to usuwanie ostatniego elementu(po nic tylko po to by ilosc ramek sie ladnie dzielila)
     # ja usuwam pierwsza probke czyli 0Hz
+    # oraz sumuje wszystkie kanaly
     Spectrum = np.sum(np.delete(Spectrum, 0, 0),axis=1)
     #przejscie na decybele
     Spectrum = np.log10(Spectrum)
@@ -116,8 +121,9 @@ while True:
     Spectrum = DivideList(Spectrum,N)
     #<TODO:> Obmyslec lepszy sposob skalowania max'a
     #Spectrum = ScaleSpectrum(Spectrum,5,H)
+    
     #tu jest potencjalnie jakis sporadical
-    Bargraph = PrepareBargraph(Spectrum)
+    Bargraph = PrepareBargraph(np.around(Spectrum,0).astype(int),2)
    
     #for x in range(MAX7219_ROW):
     #    Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
