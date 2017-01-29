@@ -14,7 +14,7 @@ import time
 #Plik do analizy
 #FileName = "yeah.wav"
 FileName = "test6.wav"
-#FileName = "vega.wav"
+FileName = "vega.wav"
 
 #Ilosc klatek na sek do wyswietlenia
 FPS = 16   #FPS-ilosc klatek na sekunde 
@@ -43,12 +43,17 @@ def PrepareBargraph(Spectrum,n=1):
     return np.array(Result)
     
 #<TODO:> komentarz    
+#<TODO:>obciac x ostatnich probek z Spectrum tak zeby bylo podzielne przez N i korzystac tylko z numpy
 def DivideList(Spectrum,N):
     #metoda na przyspieszenie, pod warunkiem ze szerokosci przedzialow beda takie same
-    #if 0==(Spectrum.size%N):
-    print(Spectrum.size)
-    #Spectrum = np.reshape(Spectrum,(N,Spectrum.size//N))
-    #return np.average(Spectrum, axis=1)  
+    if 0!=(Spectrum.size%N):
+        DivideLength = Spectrum.size - Spectrum.size%N
+        Spectrum = np.delete(Spectrum,np.s_[DivideLength:],0)
+   
+    Spectrum = np.reshape(Spectrum,(N,Spectrum.size//N))
+    return np.average(Spectrum, axis=1) 
+    
+  
 
 #<TODO:> komentarz    
 def ScaleSpectrum(Spectrum,OldMax,NewMax):
@@ -79,9 +84,7 @@ FormatDict = {1:'B',2:'h',4:'i',8:'q'}
 #FramesShift  - number of frames over which we will shift our signal in single iteration (half of WindowLength)
 #WaveData     - array of frames from .wav file
 
-#Chcemy żeby ilosc probek branych do liczenie widma byla wielokrotnoscia ilosci linii na wykresie
-#niepotrzebne to widmo ma miec ilosc probel podzielne przez N
-FramesLength = WaveParams.framerate - WaveParams.framerate%N
+FramesLength = WaveParams.framerate
 FramesShift  = math.floor(WaveParams.framerate/FPS)
 WaveData     = np.zeros(FramesLength)
 
@@ -111,8 +114,7 @@ while True:
     #liczymy rfft dla wszystkich kanalow
     #<Keep In mind:> obliczac tylko jeden kanal jesli ma byc realtime
     Spectrum = np.abs(np.fft.rfft(WaveChannel,axis=0))
-    #<TODO:>usun x ostatnich probek tak zeby miec ilosc probek podzielna przez N
-    Spectrum = np.sum(np.delete(Spectrum, 0, 0),axis=1)
+    Spectrum = np.sum(Spectrum,axis=1)
     #przejscie na decybele
     Spectrum = np.log10(Spectrum)
     
@@ -139,7 +141,7 @@ while True:
     print("Iter: ",i)
     #print("Spectrum: ",Spectrum)
     i += 1
-    break
+    #break
 
  
  

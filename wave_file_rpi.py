@@ -39,12 +39,16 @@ def PrepareBargraph(Spectrum,n=1):
         Result.append(Bars)
     return np.array(Result)
 
-#Dzieli przeslana liste na N podlist, pod warunkiem że sa one podzielne przez N
+#<TODO:> komentarz    
+#<TODO:>obciac x ostatnich probek z Spectrum tak zeby bylo podzielne przez N i korzystac tylko z numpy
 def DivideList(Spectrum,N):
     #metoda na przyspieszenie, pod warunkiem ze szerokosci przedzialow beda takie same
-    if 0==(Spectrum.size%N):
-        Spectrum = np.reshape(Spectrum,(N,Spectrum.size//N))
-        return np.amax(Spectrum, axis=1)  
+    if 0!=(Spectrum.size%N):
+        DivideLength = Spectrum.size - Spectrum.size%N
+        Spectrum = np.delete(Spectrum,np.s_[DivideLength:],0)
+   
+    Spectrum = np.reshape(Spectrum,(N,Spectrum.size//N))
+    return np.average(Spectrum, axis=1)  
   
         
 #<TODO:> komentarz    
@@ -81,7 +85,7 @@ FormatDict = {1:'B',2:'h',4:'i',8:'q'}
 #WaveData     - array of frames from .wav file
 
 #Chcemy żeby ilosc probek branych do liczenie widma byla wielokrotnoscia ilosci linii na wykresie
-FramesLength = WaveParams.framerate - WaveParams.framerate%N
+FramesLength = WaveParams.framerate
 FramesShift  = math.floor(WaveParams.framerate/FPS)
 WaveData     = np.zeros(FramesLength)
     
@@ -109,9 +113,8 @@ while True:
     
     #liczymy rfft dla wszystkich kanalow
     Spectrum = np.absolute(np.fft.rfft(WaveChannel,axis=0))
-    # ja usuwam pierwsza probke czyli 0Hz
-    # oraz sumuje wszystkie kanaly
-    Spectrum = np.sum(np.delete(Spectrum, 0, 0),axis=1)
+    # oraz sumujemy wszystkie kanaly
+    Spectrum = np.sum(Spectrum,axis=1)
     #przejscie na decybele
     Spectrum = np.log10(Spectrum)
     
