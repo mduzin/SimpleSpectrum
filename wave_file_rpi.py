@@ -22,21 +22,27 @@ N = 16
 #H - wyskosc slupka kolumny
 H = 8
 
-#Tablica z wyliczonymi widmami do wyswietlenia
-BarArray = []
+#Ilosc wyswietlaczy max7219
+n = 2
 
 #zmienne pomocnicze
 BAR_ARRAY = np.fliplr(np.tril(np.ones((H+1,H),dtype=np.int),-1))
+REG_ARR = np.array([matrix7219.REG_DIGIT0,   
+                    matrix7219.REG_DIGIT1,
+                    matrix7219.REG_DIGIT2,
+                    matrix7219.REG_DIGIT3,
+                    matrix7219.REG_DIGIT4,
+                    matrix7219.REG_DIGIT5,
+                    matrix7219.REG_DIGIT6,
+                    matrix7219.REG_DIGIT7,]*n).reshape(n,8).transpose()
 
-def SendBargraphToMatrix(Bargraph):
-    print(Bargraph)
-    for x in range(MAX7219_ROW):
-    #<TODO:>
-    #musimy stworzyc data_arr
-    #wpierw porownac z tym co zostalo wyslane w poprzedniej iteracji
-    #jezeli obraz dla danego wyswietlacza (czy nawet wiersza) nie zmienil sie
-    #to nic nie wysylaj, albo wyslij no_op jesli w choc w jednym z wyswietlaczy cos sie zmienilo
-    #Matrix7219Write([REG_DIGIT0+x,i] for i in Bargraph[x]):
+def SendBargraphToMatrix(Bargraph,n=1):
+    Bargraph = np.fliplr(Bargraph)
+    Idx = np.arange(n)
+    Bargraph = np.insert(Bargraph,Idx,REG_ARR,axis=1)
+    for row in Bargraph:
+        int_row = [int(x) for x in row]
+        matrix7219.Matrix7219Write(int_row)
     return
 
 #<TODO:> komentarz
@@ -48,7 +54,8 @@ def PrepareBargraph(Spectrum,n=1):
         Bars = np.vstack((BAR_ARRAY[item] for item in max7219bars))
         Bars = np.packbits(Bars, axis=0).flatten()
         Result.append(Bars)
-    return np.array(Result)
+    return np.array(Result).transpose()
+    return
 
 #<TODO:> komentarz    
 #<TODO:>obciac x ostatnich probek z Spectrum tak zeby bylo podzielne przez N i korzystac tylko z numpy
@@ -137,8 +144,8 @@ while True:
     #Spectrum = ScaleSpectrum(Spectrum,5,H)
     
     #tu jest potencjalnie jakis sporadical
-    Bargraph = PrepareBargraph(np.around(Spectrum,0).astype(int),2)
-    SendBargraphToMatrix(Bargraph)
+    Bargraph = PrepareBargraph(np.around(Spectrum,0).astype(int),n)
+    SendBargraphToMatrix(Bargraph,n)
     #for x in range(MAX7219_ROW):
     #    Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
        
