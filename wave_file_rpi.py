@@ -10,6 +10,7 @@ import matrix7219
 
 #Plik do analizy
 #FileName = "yeah.wav"
+#FileName = "test4.wav"
 #FileName = "test6.wav"
 FileName = "vega.wav"
 
@@ -36,13 +37,20 @@ REG_ARR = np.array([matrix7219.REG_DIGIT0,
                     matrix7219.REG_DIGIT6,
                     matrix7219.REG_DIGIT7,]*n).reshape(n,8).transpose()
 
+LastBargraph = np.zeros((8,n*2), dtype=int)
+
 def SendBargraphToMatrix(Bargraph,n=1):
     Bargraph = np.fliplr(Bargraph)
     Idx = np.arange(n)
     Bargraph = np.insert(Bargraph,Idx,REG_ARR,axis=1)
-    for row in Bargraph:
-        int_row = [int(x) for x in row]
-        matrix7219.Matrix7219Write(int_row)
+    global LastBargraph
+    DiffBargraph = LastBargraph - Bargraph
+        
+    for diff_row,row in zip(DiffBargraph,Bargraph):
+        if 0 != sum(diff_row):
+            int_row = [int(x) for x in row]
+            matrix7219.Matrix7219Write(int_row)
+    LastBargraph = Bargraph
     return
 
 #<TODO:> komentarz
@@ -134,20 +142,19 @@ while True:
     # oraz sumujemy wszystkie kanaly
     Spectrum = np.sum(Spectrum,axis=1)
     #przejscie na decybele
-    Spectrum = np.log10(Spectrum)
+    Spectrum = np.log10(Spectrum)**2
     
     #teraz dzielimy nasze spectrum na N przedzialow
     #N - ilosc przedzialow
           
     Spectrum = DivideList(Spectrum,N)
     #<TODO:> Obmyslec lepszy sposob skalowania max'a
-    #Spectrum = ScaleSpectrum(Spectrum,5,H)
+    Spectrum = ScaleSpectrum(Spectrum,32,H)
     
     #tu jest potencjalnie jakis sporadical
     Bargraph = PrepareBargraph(np.around(Spectrum,0).astype(int),n)
     SendBargraphToMatrix(Bargraph,n)
-    #for x in range(MAX7219_ROW):
-    #    Max7219Write(SPI_CTX,REG_DIGIT0+x,int(Bargraph[x]))
+
        
  
     print("Iter: ",i)
