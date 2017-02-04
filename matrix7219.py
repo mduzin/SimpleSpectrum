@@ -8,6 +8,7 @@ Created on Sun Jan 22 15:30:48 2017
 #Module to operate with max7219 serially connected devices
 import time
 import spidev
+import numpy as np
 import RPi.GPIO as GPIO
 
  
@@ -27,6 +28,8 @@ REG_SCANLIMIT   = 0xB
 REG_SHUTDOWN    = 0xC
 REG_DISPLAYTEST = 0xF
  
+
+
 #ilosc ukladow w kaskadzie
 MAX7219_COUNT = 2
 MAX7219_ROW   = 8
@@ -45,7 +48,6 @@ SPI_CTX['dev'].open(0, 0)
 SPI_CTX['dev'].mode = 3
 SPI_CTX['dev'].max_speed_hz = 1000000
 SPI_CTX['cs_pin'] = SPI_CS
-time.sleep(0.1)
 
 
 #Zapis do MAX7219
@@ -76,16 +78,6 @@ def Matrix7219Write(data_arr):
 def Matrix7219WriteChain(data_chain):
     return  
     
-#inicjalizacja SPI na Rpi
-def InitSpiCtx():
-    #SPI CTX INIT
-    SPI_CTX['dev'] = spidev.SpiDev()
-    SPI_CTX['dev'].open(0, 0)
-    SPI_CTX['dev'].mode = 3
-    SPI_CTX['dev'].max_speed_hz = 1000000
-    SPI_CTX['cs_pin'] = SPI_CS
-    time.sleep(0.1)
-    return
 #inicjalizacja GPIO na Rpi
 def InitGpio():
     #GPIO INIT
@@ -97,11 +89,25 @@ def InitGpio():
 #Otwarcie liba do obslugi wyswietlaczy max7219 polaczonych
 #szeregow. 
 # IN n - ilosc wyswietlaczy polaczonych szeregowo
+# IN H - ilosc wierszy w wyswietlaczu
+# IN N - ilosc kolumn w wyswietlaczu
 # OUT Matrix7219_handle - obiekt max7219 polaczonych szeregowo
-def Matrix7219Open(n=2):
+def Matrix7219Open(n=2,H=8,N=8):
     MATRIX_7219_CTX = {}
     MATRIX_7219_CTX['n'] = n
-    #InitSpiCtx()
+    MATRIX_7219_CTX['N'] = N*n
+    MATRIX_7219_CTX['H'] = H
+    
+    #zmienne pomocnicze
+    MATRIX_7219_CTX['BAR_ARR'] = np.fliplr(np.tril(np.ones((H+1,H),dtype=np.int),-1))
+    MATRIX_7219_CTX['REG_ARR'] = np.array([REG_DIGIT0,   
+                                           REG_DIGIT1,
+                                           REG_DIGIT2,
+                                           REG_DIGIT3,
+                                           REG_DIGIT4,
+                                           REG_DIGIT5,
+                                           REG_DIGIT6,
+                                           REG_DIGIT7,]*n).reshape(n,8).transpose()    
     InitGpio()
     return MATRIX_7219_CTX
 

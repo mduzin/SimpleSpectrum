@@ -9,37 +9,23 @@ import matrix7219
 
 
 #Plik do analizy
-#FileName = "yeah.wav"
-#FileName = "test4.wav"
+#<TODO:> plik wczytywany jako parametr wejsciowy
 #FileName = "test6.wav"
 FileName = "vega.wav"
 
 #Ilosc klatek na sek do wyswietlenia
-FPS = 23   #FPS-ilosc klatek na sekunde 
-
-#N - ilosc kolumn na wykresie spectrum 
-N = 16    
-
-#H - wyskosc slupka kolumny
-H = 8
+FPS = 10   #FPS-ilosc klatek na sekunde 
 
 #Ilosc wyswietlaczy max7219
 n = 2
 
-#zmienne pomocnicze
-BAR_ARRAY = np.fliplr(np.tril(np.ones((H+1,H),dtype=np.int),-1))
-REG_ARR = np.array([matrix7219.REG_DIGIT0,   
-                    matrix7219.REG_DIGIT1,
-                    matrix7219.REG_DIGIT2,
-                    matrix7219.REG_DIGIT3,
-                    matrix7219.REG_DIGIT4,
-                    matrix7219.REG_DIGIT5,
-                    matrix7219.REG_DIGIT6,
-                    matrix7219.REG_DIGIT7,]*n).reshape(n,8).transpose()
 
+#zmienna pomocnicza
 LastBargraph = np.zeros((8,n*2), dtype=int)
 
-def SendBargraphToMatrix(Bargraph,n=1):
+def SendBargraphToMatrix(Bargraph,Matrix_Ctx):
+    n = Matrix_Ctx['n']
+    REG_ARR = Matrix_Ctx['REG_ARR']
     Bargraph = np.fliplr(Bargraph)
     Idx = np.arange(n)
     Bargraph = np.insert(Bargraph,Idx,REG_ARR,axis=1)
@@ -54,12 +40,13 @@ def SendBargraphToMatrix(Bargraph,n=1):
     return
 
 #<TODO:> komentarz
-def PrepareBargraph(Spectrum,n=1):
+def PrepareBargraph(Spectrum,Matrix_Ctx):
     #wpierw musimy podzielic Spectrum na n wyswietlaczy
+    BAR_ARR = Matrix_Ctx['BAR_ARR']
     Spectrum = Spectrum.reshape(n,-1) 
     Result = []
     for max7219bars in Spectrum:
-        Bars = np.vstack((BAR_ARRAY[item] for item in max7219bars))
+        Bars = np.vstack((BAR_ARR[item] for item in max7219bars))
         Bars = np.packbits(Bars, axis=0).flatten()
         Result.append(Bars)
     return np.array(Result).transpose()
@@ -86,6 +73,19 @@ def ScaleSpectrum(Spectrum,OldMax,NewMax):
     return np.around((ScaleSpectrum*NewMax)/OldMax)
  
 
+def SendSpectrumToMatrix(Spectrum,Matrix_Ctx): 
+       
+    Spectrum = DivideList(Spectrum,Matrix_Ctx['N'])
+    #<TODO:> Obmyslec lepszy sposob skalowania max'a
+    Spectrum = ScaleSpectrum(Spectrum,32,Matrix_Ctx['H'])
+    
+    #tu jest potencjalnie jakis sporadical
+    Bargraph = PrepareBargraph(np.around(Spectrum,0).astype(int),Matrix_Ctx)
+    SendBargraphToMatrix(Bargraph,Matrix_Ctx)    
+    return
+
+#----Script Start----
+    
 MATRIX_CTX = matrix7219.Matrix7219Open(n=2)
 matrix7219.Matrix7219Init(MATRIX_CTX)
 matrix7219.Matrix7219Clean(MATRIX_CTX)
@@ -138,35 +138,26 @@ while True:
     WaveChannel = np.array(WaveData).reshape(-1,WaveParams.nchannels)
     
     #liczymy rfft dla wszystkich kanalow
-    Spectrum = np.absolute(np.fft.rfft(WaveChannel,axis=0))
+    #Spectrum = np.absolute(np.fft.rfft(WaveChannel,axis=0))
     # oraz sumujemy wszystkie kanaly
-    Spectrum = np.sum(Spectrum,axis=1)
-    #przejscie na decybele
+    #Spectrum = np.sum(Spectrum,axis=1)
+    
+    #<TODO:>liczymy tylko kanal 1
+    Spectrum = np.absolute(np.fft.rfft(WaveChannel[:,0]))
+    
+    #przejscie na decybele,podnoszenie ^2 tylko dla celow wizualizacyjnych
     Spectrum = np.log10(Spectrum)**2
     
-    #teraz dzielimy nasze spectrum na N przedzialow
-    #N - ilosc przedzialow
-          
-    Spectrum = DivideList(Spectrum,N)
-    #<TODO:> Obmyslec lepszy sposob skalowania max'a
-    Spectrum = ScaleSpectrum(Spectrum,32,H)
+    SendSpectrumToMatrix(Spectrum,MATRIX_CTX)
     
-    #tu jest potencjalnie jakis sporadical
-    Bargraph = PrepareBargraph(np.around(Spectrum,0).astype(int),n)
-    SendBargraphToMatrix(Bargraph,n)
-
-       
- 
     print("Iter: ",i)
     #print("Spectrum: ",Spectrum)
     i += 1
     #break
 
- 
-    
+     
   
 print("Koniec czytania pliku .wav")
-
-#End of script
 matrix7219.Matrix7219Close()
 print("Koniec skryptu")
+#----End of script----
