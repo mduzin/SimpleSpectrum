@@ -3,6 +3,7 @@ import struct
 import math
 import numpy as np
 import matrix7219
+import pyaudio
  
  
 #Zmienne globalne i Nastawy
@@ -14,7 +15,7 @@ import matrix7219
 FileName = "vega.wav"
 
 #Ilosc klatek na sek do wyswietlenia
-FPS = 10   #FPS-ilosc klatek na sekunde 
+FPS = 27   #FPS-ilosc klatek na sekunde 
 
 #Ilosc wyswietlaczy max7219
 n = 2
@@ -114,16 +115,24 @@ FormatDict = {1:'B',2:'h',4:'i',8:'q'}
 FramesLength = WaveParams.framerate
 FramesShift  = math.floor(WaveParams.framerate/FPS)
 WaveData     = np.zeros(FramesLength)
-    
+
+p = pyaudio.PyAudio()
+
+stream = p.open(format=p.get_format_from_width(WaveObj.getsampwidth()),
+                channels=WaveObj.getnchannels(),
+                rate=WaveObj.getframerate(),
+                output=True)   
+ 
  
 i=0
 while True:
     #pobieramy nowe ramki z pliku
     WaveFrame = WaveObj.readframes(FramesShift)
-    
+        
     #jesli nie ma wiecej ramek to wyjdz z petli
     if not WaveFrame: break
 
+    stream.write(WaveFrame)
     #Flow:
     #1. stworz macierz numpy na ramki (inicuj zerami) DONE 
     #2. odczyt nowej porcji danych tak jak jest: WaveFrame = WaveObj.readframes(FramesShift)DONE
@@ -149,6 +158,7 @@ while True:
     Spectrum = np.log10(Spectrum)**2
     
     SendSpectrumToMatrix(Spectrum,MATRIX_CTX)
+ 
     
     print("Iter: ",i)
     #print("Spectrum: ",Spectrum)
@@ -158,6 +168,9 @@ while True:
      
   
 print("Koniec czytania pliku .wav")
+stream.stop_stream()
+stream.close()
+p.terminate()
 matrix7219.Matrix7219Close()
 print("Koniec skryptu")
 #----End of script----
