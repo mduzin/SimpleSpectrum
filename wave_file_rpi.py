@@ -123,12 +123,23 @@ stream = p.open(format=p.get_format_from_width(WaveObj.getsampwidth()),
                 rate=WaveObj.getframerate(),
                 output=True)   
  
- 
+print("ilosc ramek1: ",WaveObj.getnframes())
+#wczytamy wszystkie ramki na raz
+WaveFrames = WaveObj.readframes(WaveObj.getnframes())
+print("ilosc ramek2: ",len(WaveFrames))
+
+startIndex = 0
+multiply = WaveObj.getnchannels()*WaveObj.getsampwidth()
+stopIndex = FramesShift * multiply
+
 i=0
 while True:
     #pobieramy nowe ramki z pliku
-    WaveFrame = WaveObj.readframes(FramesShift)
-        
+    #WaveFrame = WaveObj.readframes(FramesShift)
+    WaveFrame = WaveFrames[startIndex:stopIndex]
+    startIndex = stopIndex
+    stopIndex = stopIndex + (FramesShift * multiply)
+    
     #jesli nie ma wiecej ramek to wyjdz z petli
     if not WaveFrame: break
 
