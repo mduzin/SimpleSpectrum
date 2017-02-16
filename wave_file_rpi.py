@@ -11,11 +11,11 @@ import pyaudio
 
 #Plik do analizy
 #<TODO:> plik wczytywany jako parametr wejsciowy
-#FileName = "test6.wav"
-FileName = "vega.wav"
+FileName = "test6.wav"
+#FileName = "vega.wav"
 
 #Ilosc klatek na sek do wyswietlenia
-FPS = 27   #FPS-ilosc klatek na sekunde 
+FPS = 23   #FPS-ilosc klatek na sekunde 
 
 #Ilosc wyswietlaczy max7219
 n = 2
@@ -171,6 +171,7 @@ print("Koniec czytania pliku .wav")
 stream.stop_stream()
 stream.close()
 p.terminate()
+matrix7219.Matrix7219Clean(MATRIX_CTX)
 matrix7219.Matrix7219Close()
 print("Koniec skryptu")
 #----End of script----
