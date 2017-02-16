@@ -1,3 +1,4 @@
+import sys
 import wave
 import struct
 import math
@@ -6,23 +7,24 @@ import matrix7219
 import pyaudio
  
  
-#Zmienne globalne i Nastawy
+#Global variables and settings
 
 
-#Plik do analizy
-#<TODO:> plik wczytywany jako parametr wejsciowy
-FileName = "test6.wav"
+#.wav file to proceed
+#<TODO:> take .wav file as input parameter
+FileName = sys.argv[1]
+#FileName = "test6.wav"
 #FileName = "vega.wav"
 
-#Ilosc klatek na sek do wyswietlenia
-FPS = 23   #FPS-ilosc klatek na sekunde 
+#Frames per second to display
+FPS = 27   #FPS
 
-#Ilosc wyswietlaczy max7219
+#Number of max7219 displays serially connected
 n = 2
 
-
-#zmienna pomocnicza
+#additional variable
 LastBargraph = np.zeros((8,n*2), dtype=int)
+
 
 def SendBargraphToMatrix(Bargraph,Matrix_Ctx):
     n = Matrix_Ctx['n']
@@ -33,10 +35,11 @@ def SendBargraphToMatrix(Bargraph,Matrix_Ctx):
     global LastBargraph
     DiffBargraph = LastBargraph - Bargraph
         
-    for diff_row,row in zip(DiffBargraph,Bargraph):
-        if 0 != sum(diff_row):
-            int_row = [int(x) for x in row]
-            matrix7219.Matrix7219Write(int_row)
+    if 0 != np.sum(DiffBargraph):
+        for diff_row,row in zip(DiffBargraph,Bargraph):
+            if 0 != sum(diff_row):
+                int_row = [int(x) for x in row]
+                matrix7219.Matrix7219Write(int_row)
     LastBargraph = Bargraph
     return
 
