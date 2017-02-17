@@ -45,7 +45,9 @@ def SendBargraphToMatrix(Bargraph,Matrix_Ctx):
 #<TODO:> komentarz
 def PrepareBargraph(Bargraph,Matrix_Ctx):
     if Bargraph.size == Matrix_Ctx['N']:
-        #wpierw musimy podzielic Spectrum na n wyswietlaczy
+        #sprawdzamy czy wartosci mieszcza sie w zakresie, jak nie to obetnij do zakresu <0,H>
+        Bargraph = np.clip(Bargraph,0,Matrix_Ctx['H'])
+        #musimy podzielic Spectrum na n wyswietlaczy
         BAR_ARR = Matrix_Ctx['BAR_ARR']
         Bargraph = Bargraph.reshape(n,-1) 
         Result = []
