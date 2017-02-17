@@ -77,9 +77,7 @@ def AggregateList(Spectrum,N):
 def ScaleSpectrum(Spectrum,OldMax,NewMax):
     #Saturation filter
     if 0 != OldMax:
-        SatSpectrum = np.clip(Spectrum,0,OldMax)
-        #Scale array
-        ScaleSpectrum = np.array(SatSpectrum)
+        ScaleSpectrum = np.clip(Spectrum,0,OldMax)
         return np.around((ScaleSpectrum*NewMax)/OldMax)
     else:
         return np.array([0])
