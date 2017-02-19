@@ -85,13 +85,9 @@ def ScaleSpectrum(Spectrum,OldMax,NewMax):
         return np.array([0])
  
 
-def SendSpectrumToMatrix(Spectrum,Matrix_Ctx): 
-       
+def SendSpectrumToMatrix(Spectrum,Matrix_Ctx):      
     Spectrum = AggregateList(Spectrum,Matrix_Ctx['N'])
-    #<TODO:> Obmyslec lepszy sposob skalowania max'a
     Spectrum = ScaleSpectrum(Spectrum,32,Matrix_Ctx['H'])
-    
-    #tu jest potencjalnie jakis sporadical
     Bargraph = PrepareBargraph(np.around(Spectrum,0).astype(int),Matrix_Ctx)
     SendBargraphToMatrix(Bargraph,Matrix_Ctx)    
     return
