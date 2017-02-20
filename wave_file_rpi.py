@@ -15,7 +15,7 @@ import pyaudio
 FileName = sys.argv[1]
 
 #Frames per second to display
-FPS = 27   #FPS
+FPS = 23   #FPS
 
 #Number of max7219 displays serially connected
 n = 2
@@ -85,12 +85,11 @@ def ScaleSpectrum(Spectrum,OldMax,NewMax):
         return np.array([0])
  
 
-def SendSpectrumToMatrix(Spectrum,Matrix_Ctx):      
+def PrepareBargraphForMatrix(Spectrum,Matrix_Ctx):      
     Spectrum = AggregateList(Spectrum,Matrix_Ctx['N'])
     Spectrum = ScaleSpectrum(Spectrum,32,Matrix_Ctx['H'])
     Bargraph = PrepareBargraph(np.around(Spectrum,0).astype(int),Matrix_Ctx)
-    SendBargraphToMatrix(Bargraph,Matrix_Ctx)    
-    return
+    return Bargraph
 
 #----Script Start----
     
@@ -123,12 +122,6 @@ FramesLength = WaveParams.framerate
 FramesShift  = math.floor(WaveParams.framerate/FPS)
 WaveData     = np.zeros(FramesLength)
 
-p = pyaudio.PyAudio()
-
-stream = p.open(format=p.get_format_from_width(WaveObj.getsampwidth()),
-                channels=WaveObj.getnchannels(),
-                rate=WaveObj.getframerate(),
-                output=True)   
  
 #Read all frames at once
 WaveFrames = WaveObj.readframes(WaveObj.getnframes())
@@ -136,6 +129,8 @@ WaveFrames = WaveObj.readframes(WaveObj.getnframes())
 startIndex = 0
 multiply = WaveObj.getnchannels()*WaveObj.getsampwidth()
 stopIndex = FramesShift * multiply
+Bargraphs = []
+WaveSamples = []
 
 i=0
 while True:
@@ -148,7 +143,7 @@ while True:
     #jesli nie ma wiecej ramek to wyjdz z petli
     if not WaveFrame: break
 
-    stream.write(WaveFrame)
+    WaveSamples.append(WaveFrame)
     #Flow:
     #1. stworz macierz numpy na ramki (inicuj zerami) DONE 
     #2. odczyt nowej porcji danych tak jak jest: WaveFrame = WaveObj.readframes(FramesShift)DONE
@@ -176,15 +171,24 @@ while True:
     else:
         Spectrum = np.array([0])
        
-    SendSpectrumToMatrix(Spectrum,MATRIX_CTX)
- 
+    Bargraphs.append(PrepareBargraphForMatrix(Spectrum,MATRIX_CTX))
     
     print("Iter: ",i)
     #print("Spectrum: ",Spectrum)
     i += 1
     #break
 
-     
+p = pyaudio.PyAudio()
+
+stream = p.open(format=p.get_format_from_width(WaveObj.getsampwidth()),
+                channels=WaveObj.getnchannels(),
+                rate=WaveObj.getframerate(),
+                output=True)  
+    
+for Bargraph,WaveSample in zip(Bargraphs,WaveSamples):
+    SendBargraphToMatrix(Bargraph,MATRIX_CTX)    
+    stream.write(WaveSample)
+    
   
 print("Koniec czytania pliku .wav")
 stream.stop_stream()
