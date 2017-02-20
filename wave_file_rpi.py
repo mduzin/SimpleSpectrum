@@ -77,10 +77,7 @@ def ScaleSpectrum(Spectrum,OldMax,NewMax):
 def SendSpectrumToMatrix(Spectrum,Matrix_Ctx): 
        
     Spectrum = DivideList(Spectrum,Matrix_Ctx['N'])
-    #<TODO:> Obmyslec lepszy sposob skalowania max'a
     Spectrum = ScaleSpectrum(Spectrum,32,Matrix_Ctx['H'])
-    
-    #tu jest potencjalnie jakis sporadical
     Bargraph = PrepareBargraph(np.around(Spectrum,0).astype(int),Matrix_Ctx)
     SendBargraphToMatrix(Bargraph,Matrix_Ctx)    
     return
@@ -123,10 +120,8 @@ stream = p.open(format=p.get_format_from_width(WaveObj.getsampwidth()),
                 rate=WaveObj.getframerate(),
                 output=True)   
  
-print("ilosc ramek1: ",WaveObj.getnframes())
-#wczytamy wszystkie ramki na raz
+#Read all frames at once
 WaveFrames = WaveObj.readframes(WaveObj.getnframes())
-print("ilosc ramek2: ",len(WaveFrames))
 
 startIndex = 0
 multiply = WaveObj.getnchannels()*WaveObj.getsampwidth()
