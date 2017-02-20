@@ -1,3 +1,4 @@
+import sys
 import wave
 import struct
 import math
@@ -6,77 +7,86 @@ import matrix7219
 import pyaudio
  
  
-#Zmienne globalne i Nastawy
+#Global variables and settings
 
 
-#Plik do analizy
-#<TODO:> plik wczytywany jako parametr wejsciowy
-FileName = "test6.wav"
-#FileName = "vega.wav"
+#.wav file to proceed
+#<TODO:> sprawdzanie czy plik jest poprawny, czy istnieje, czy ma dozwolona forme itd.
+FileName = sys.argv[1]
 
-#Ilosc klatek na sek do wyswietlenia
-FPS = 23   #FPS-ilosc klatek na sekunde 
+#Frames per second to display
+FPS = 27   #FPS
 
-#Ilosc wyswietlaczy max7219
+#Number of max7219 displays serially connected
 n = 2
 
-
-#zmienna pomocnicza
+#additional variable
 LastBargraph = np.zeros((8,n*2), dtype=int)
 
+
 def SendBargraphToMatrix(Bargraph,Matrix_Ctx):
-    n = Matrix_Ctx['n']
-    REG_ARR = Matrix_Ctx['REG_ARR']
-    Bargraph = np.fliplr(Bargraph)
-    Idx = np.arange(n)
-    Bargraph = np.insert(Bargraph,Idx,REG_ARR,axis=1)
-    global LastBargraph
-    DiffBargraph = LastBargraph - Bargraph
+    if Bargraph.size == Matrix_Ctx['N']:
+        n = Matrix_Ctx['n']
+        REG_ARR = Matrix_Ctx['REG_ARR']
+        Bargraph = np.fliplr(Bargraph)
+        Idx = np.arange(n)
+        Bargraph = np.insert(Bargraph,Idx,REG_ARR,axis=1)
+        global LastBargraph
+        DiffBargraph = LastBargraph - Bargraph
         
-    for diff_row,row in zip(DiffBargraph,Bargraph):
-        if 0 != sum(diff_row):
-            int_row = [int(x) for x in row]
-            matrix7219.Matrix7219Write(int_row)
-    LastBargraph = Bargraph
+        if 0 != np.sum(DiffBargraph):
+            for diff_row,row in zip(DiffBargraph,Bargraph):
+                if 0 != sum(diff_row):
+                    int_row = [int(x) for x in row]
+                    matrix7219.Matrix7219Write(int_row)
+                    LastBargraph = Bargraph
     return
 
 #<TODO:> komentarz
-def PrepareBargraph(Spectrum,Matrix_Ctx):
-    #wpierw musimy podzielic Spectrum na n wyswietlaczy
-    BAR_ARR = Matrix_Ctx['BAR_ARR']
-    Spectrum = Spectrum.reshape(n,-1) 
-    Result = []
-    for max7219bars in Spectrum:
-        Bars = np.vstack((BAR_ARR[item] for item in max7219bars))
-        Bars = np.packbits(Bars, axis=0).flatten()
-        Result.append(Bars)
-    return np.array(Result).transpose()
-    return
+def PrepareBargraph(Bargraph,Matrix_Ctx):
+    if Bargraph.size == Matrix_Ctx['N']:
+        #sprawdzamy czy wartosci mieszcza sie w zakresie, jak nie to obetnij do zakresu <0,H>
+        Bargraph = np.clip(Bargraph,0,Matrix_Ctx['H'])
+        #musimy podzielic Spectrum na n wyswietlaczy
+        BAR_ARR = Matrix_Ctx['BAR_ARR']
+        Bargraph = Bargraph.reshape(n,-1) 
+        Result = []
+        for max7219bars in Bargraph:
+            Bars = np.vstack((BAR_ARR[item] for item in max7219bars))
+            Bars = np.packbits(Bars, axis=0).flatten()
+            Result.append(Bars)
+        return np.array(Result).transpose()
+    else:
+        return np.array([0])
 
 #<TODO:> komentarz    
-#<TODO:>obciac x ostatnich probek z Spectrum tak zeby bylo podzielne przez N i korzystac tylko z numpy
-def DivideList(Spectrum,N):
+def AggregateList(Spectrum,N):
     #metoda na przyspieszenie, pod warunkiem ze szerokosci przedzialow beda takie same
-    if 0!=(Spectrum.size%N):
-        DivideLength = Spectrum.size - Spectrum.size%N
-        Spectrum = np.delete(Spectrum,np.s_[DivideLength:],0)
+    if Spectrum.size > N:
+        if 0!=(Spectrum.size%N):
+            DivideLength = Spectrum.size - Spectrum.size%N
+            #obcianamy x ostatnich probek z Spectrum tak zeby bylo podzielne przez N i korzystac tylko z numpy
+            Spectrum = np.delete(Spectrum,np.s_[DivideLength:],0)
    
-    Spectrum = np.reshape(Spectrum,(N,Spectrum.size//N))
-    return np.average(Spectrum, axis=1)  
-  
+            Spectrum = np.reshape(Spectrum,(N,Spectrum.size//N))
+            return np.average(Spectrum, axis=1)  
+    else:
+        return np.array([0])
+
+      
         
 #<TODO:> komentarz    
 def ScaleSpectrum(Spectrum,OldMax,NewMax):
     #Saturation filter
-    SatSpectrum = np.clip(Spectrum,0,OldMax)
-    #Scale array
-    ScaleSpectrum = np.array(SatSpectrum)
-    return np.around((ScaleSpectrum*NewMax)/OldMax)
+    if 0 != OldMax:
+        ScaleSpectrum = np.clip(Spectrum,0,OldMax)
+        return np.around((ScaleSpectrum*NewMax)/OldMax)
+    else:
+        return np.array([0])
  
 
-def SendSpectrumToMatrix(Spectrum,Matrix_Ctx): 
-       
-    Spectrum = DivideList(Spectrum,Matrix_Ctx['N'])
+def SendSpectrumToMatrix(Spectrum,Matrix_Ctx):      
+    Spectrum = AggregateList(Spectrum,Matrix_Ctx['N'])
     Spectrum = ScaleSpectrum(Spectrum,32,Matrix_Ctx['H'])
     Bargraph = PrepareBargraph(np.around(Spectrum,0).astype(int),Matrix_Ctx)
     SendBargraphToMatrix(Bargraph,Matrix_Ctx)    
@@ -157,12 +167,15 @@ while True:
     # oraz sumujemy wszystkie kanaly
     #Spectrum = np.sum(Spectrum,axis=1)
     
-    #<TODO:>liczymy tylko kanal 1
-    Spectrum = np.absolute(np.fft.rfft(WaveChannel[:,0]))
-    
-    #przejscie na decybele,podnoszenie ^2 tylko dla celow wizualizacyjnych
-    Spectrum = np.log10(Spectrum)**2
-    
+    #Liczymy tylko kanal nr.1
+    WaveChannel = WaveChannel[:,0] 
+    if 0 != WaveChannel.sum():
+        Spectrum = np.absolute(np.fft.rfft(WaveChannel))
+        #przejscie na decybele,podnoszenie ^2 tylko dla celow wizualizacyjnych
+        Spectrum = np.log10(Spectrum)**2
+    else:
+        Spectrum = np.array([0])
+       
     SendSpectrumToMatrix(Spectrum,MATRIX_CTX)
  
     
