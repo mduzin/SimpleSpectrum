@@ -29,8 +29,7 @@ def SendBargraphToMatrix(Bargraph,Matrix_Ctx):
         n = Matrix_Ctx['n']
         REG_ARR = Matrix_Ctx['REG_ARR']
         Bargraph = np.fliplr(Bargraph)
-        Idx = np.arange(n)
-        Bargraph = np.insert(Bargraph,Idx,REG_ARR,axis=1)
+        Bargraph = np.insert(Bargraph,np.arange(n),REG_ARR,axis=1)
         global LastBargraph
         DiffBargraph = LastBargraph - Bargraph
         
