@@ -108,26 +108,26 @@ if __name__ == "__main__":
 
  
 #Read all frames at once
-WaveFrames = WaveObj.readframes(WaveObj.getnframes())
+    WaveFrames = WaveObj.readframes(WaveObj.getnframes())
 
-startIndex = 0
-multiply = WaveObj.getnchannels()*WaveObj.getsampwidth()
-stopIndex = FramesShift * multiply
-Bargraphs = []
-WaveSamples = []
+    startIndex = 0
+    multiply = WaveObj.getnchannels()*WaveObj.getsampwidth()
+    stopIndex = FramesShift * multiply
+    Bargraphs = []
+    WaveSamples = []
 
-i=0
-while True:
-    #pobieramy nowe ramki z pliku
-    #WaveFrame = WaveObj.readframes(FramesShift)
-    WaveFrame = WaveFrames[startIndex:stopIndex]
-    startIndex = stopIndex
-    stopIndex = stopIndex + (FramesShift * multiply)
+    i=0
+    while True:
+        #pobieramy nowe ramki z pliku
+        #WaveFrame = WaveObj.readframes(FramesShift)
+        WaveFrame = WaveFrames[startIndex:stopIndex]
+        startIndex = stopIndex
+        stopIndex = stopIndex + (FramesShift * multiply)
     
         #jesli nie ma wiecej ramek to wyjdz z petli
         if not WaveFrame: break
 
-    WaveSamples.append(WaveFrame)
+        WaveSamples.append(WaveFrame)
         #Flow:
             #1. stworz macierz numpy na ramki (inicuj zerami) DONE 
         #2. odczyt nowej porcji danych tak jak jest: WaveFrame = WaveObj.readframes(FramesShift)DONE
@@ -156,29 +156,29 @@ while True:
         else:
             Spectrum = np.array([0])
        
-    Bargraphs.append(PrepareBargraphForMatrix(Spectrum,MATRIX_CTX))
+        Bargraphs.append(PrepareBargraphForMatrix(Spectrum,MATRIX_CTX))
     
-            print("Iter: ",i)
-            #print("Spectrum: ",Spectrum)
-            i += 1
-            #break
+        print("Iter: ",i)
+        #print("Spectrum: ",Spectrum)
+        i += 1
+        #break
     
-p = pyaudio.PyAudio()
+    p = pyaudio.PyAudio()
 
-stream = p.open(format=p.get_format_from_width(WaveObj.getsampwidth()),
+    stream = p.open(format=p.get_format_from_width(WaveObj.getsampwidth()),
                 channels=WaveObj.getnchannels(),
                 rate=WaveObj.getframerate(),
                 output=True)  
     
-for Bargraph,WaveSample in zip(Bargraphs,WaveSamples):
-    SendBargraphToMatrix(Bargraph,MATRIX_CTX)    
-    stream.write(WaveSample)
+    for Bargraph,WaveSample in zip(Bargraphs,WaveSamples):
+        SendBargraphToMatrix(Bargraph,MATRIX_CTX)    
+        stream.write(WaveSample)
     
-        print("Koniec czytania pliku .wav")
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
-        matrix7219.Matrix7219Clean(MATRIX_CTX)
-        matrix7219.Matrix7219Close()
-        print("Koniec skryptu")
+    print("Koniec czytania pliku .wav")
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+    matrix7219.Matrix7219Clean(MATRIX_CTX)
+    matrix7219.Matrix7219Close()
+    print("Koniec skryptu")
 #----End of script----
