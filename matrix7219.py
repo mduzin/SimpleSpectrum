@@ -38,7 +38,7 @@ MAX7219_COL   = 8
 #Numery pinow SPI
 SPI_MOSI = 19
 SPI_CLK  = 23
-SPI_CS   = 24    #nie wiem czemu ale w przykladzie bylo 23???
+SPI_CS   = 24
 
 #zmienna z danymi do obslugi SPI
 SPI_CTX = {}  
@@ -100,8 +100,14 @@ def Matrix7219SendMatrixData(matrix_7219_ctx,data):
                 if 0 != sum(diff_row):
                     int_row = [int(x) for x in row]
                     Matrix7219Write(int_row)
+#                else:
+#                    print("Wiersz bez zmian")
+#        else:
+#            print("Cała data bez zmian")
         #store data as current displayed data
         matrix_7219_ctx['Data'] = data
+#    else:
+#        print("Zly format ramki data")
     return    
 
 #Get current matrix configuration
