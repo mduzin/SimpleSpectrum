@@ -83,7 +83,6 @@ if __name__ == "__main__":
     matrix7219.Matrix7219Clean(MATRIX_CTX)
 
     WaveObj = wave.open(FileName, mode='rb')
- 
     print("Channels: ".ljust(25),WaveObj.getnchannels())
     print("Sample width: ".ljust(25),WaveObj.getsampwidth()," bytes")
     print("Sampling frequency: ".ljust(25),WaveObj.getframerate()," Hz")
@@ -108,7 +107,6 @@ if __name__ == "__main__":
     WaveData     = np.zeros(FramesLength)
 
     p = pyaudio.PyAudio()
-    
     stream = p.open(format=p.get_format_from_width(WaveObj.getsampwidth()),
                     channels=WaveObj.getnchannels(),
                     rate=WaveObj.getframerate(),
@@ -122,10 +120,11 @@ if __name__ == "__main__":
         
         #jesli nie ma wiecej ramek to wyjdz z petli
         if not WaveFrame: break
-
+        
         stream.write(WaveFrame)
+        
         #Flow:
-            #1. stworz macierz numpy na ramki (inicuj zerami) DONE 
+        #1. stworz macierz numpy na ramki (inicuj zerami) DONE 
         #2. odczyt nowej porcji danych tak jak jest: WaveFrame = WaveObj.readframes(FramesShift)DONE
         #3. usun przestarzale ramki z poczatku .delete DONE
         #4. dodanie odczytanej macierzy numpy z ramkami .append DONE
@@ -152,20 +151,19 @@ if __name__ == "__main__":
         else:
             Spectrum = np.array([0])
        
-            SendSpectrumToMatrix(Spectrum,MATRIX_CTX)
- 
-    
-            print("Iter: ",i)
-            #print("Spectrum: ",Spectrum)
-            i += 1
-            #break
+        SendSpectrumToMatrix(Spectrum,MATRIX_CTX)
+     
+        print("Iter: ",i)
+        #print("Spectrum: ",Spectrum)
+        i += 1
+        #break
     
   
-        print("Koniec czytania pliku .wav")
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
-        matrix7219.Matrix7219Clean(MATRIX_CTX)
-        matrix7219.Matrix7219Close()
-        print("Koniec skryptu")
+    print("Koniec czytania pliku .wav")
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+    matrix7219.Matrix7219Clean(MATRIX_CTX)
+    matrix7219.Matrix7219Close()
+    print("Koniec skryptu")
 #----End of script----
