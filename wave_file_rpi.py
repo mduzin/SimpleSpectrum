@@ -5,7 +5,7 @@ import math
 import numpy as np
 import matrix7219
 import pyaudio
- 
+
 
 def SendBargraphToMatrix(Bargraph,Matrix_Ctx):
     if Bargraph.size == Matrix_Ctx['N']:
@@ -23,7 +23,7 @@ def PrepareBargraph(Bargraph,Matrix_Ctx):
         Bargraph = np.clip(Bargraph,0,Matrix_Ctx['H'])
         #musimy podzielic Spectrum na n wyswietlaczy
         BAR_ARR = Matrix_Ctx['BAR_ARR']
-        Bargraph = Bargraph.reshape(n,-1) 
+        Bargraph = Bargraph.reshape(n,-1)
         Result = []
         for max7219bars in Bargraph:
             Bars = np.vstack((BAR_ARR[item] for item in max7219bars))
@@ -41,14 +41,13 @@ def AggregateList(Spectrum,N):
             DivideLength = Spectrum.size - Spectrum.size%N
             #obcianamy x ostatnich probek z Spectrum tak zeby bylo podzielne przez N i korzystac tylko z numpy
             Spectrum = np.delete(Spectrum,np.s_[DivideLength:],0)
-   
+
             Spectrum = np.reshape(Spectrum,(N,Spectrum.size//N))
-            return np.average(Spectrum, axis=1)  
+            return np.average(Spectrum, axis=1)
     else:
         return np.array([0])
 
-      
-        
+
 #<TODO:> komentarz    
 def ScaleSpectrum(Spectrum,OldMax,NewMax):
     #Saturation filter
@@ -59,16 +58,16 @@ def ScaleSpectrum(Spectrum,OldMax,NewMax):
         return np.array([0])
  
 
-def SendSpectrumToMatrix(Spectrum,Matrix_Ctx):      
+def SendSpectrumToMatrix(Spectrum,Matrix_Ctx):
     Spectrum = AggregateList(Spectrum,Matrix_Ctx['N'])
     Spectrum = ScaleSpectrum(Spectrum,32,Matrix_Ctx['H'])
     Bargraph = PrepareBargraph(np.around(Spectrum,0).astype(int),Matrix_Ctx)
-    SendBargraphToMatrix(Bargraph,Matrix_Ctx)    
+    SendBargraphToMatrix(Bargraph,Matrix_Ctx)
     return
 
 #----Script Start----
 if __name__ == "__main__":
-    
+
     #Global variables and settings
     #.wav file to proceed
     #<TODO:> sprawdzanie czy plik jest poprawny, czy istnieje, czy ma dozwolona forme itd.
@@ -77,7 +76,7 @@ if __name__ == "__main__":
     FileName = sys.argv[1]
     FPS = 27   #FPS
     n = 2
-    
+
     MATRIX_CTX = matrix7219.Matrix7219Open(n=2)
     matrix7219.Matrix7219Init(MATRIX_CTX)
     matrix7219.Matrix7219Clean(MATRIX_CTX)
@@ -88,14 +87,13 @@ if __name__ == "__main__":
     print("Sampling frequency: ".ljust(25),WaveObj.getframerate()," Hz")
     print("Number of audio frames: ".ljust(25),WaveObj.getnframes())
     print("Compression type: ".ljust(25),WaveObj.getcomptype(),"\n")
- 
+
     WaveParams = WaveObj.getparams(); #print("Params: ".ljust(25),WaveParams, "\n")
- 
+
     #8-bit samples are stored as unsigned bytes, ranging from 0 to 255. 
     #16-bit samples are stored as 2's-complement signed integers, ranging from -32768 to 32767.
     #.wav file is always Little Endian so we use '<'
     FormatDict = {1:'B',2:'h',4:'i',8:'q'}
- 
 
     #FramesLength - number of frames we need to calculate current spectrum, eqaul to sampling frequency
     #FramesShift  - number of frames over which we will shift our signal in single iteration (half of WindowLength)
@@ -110,19 +108,18 @@ if __name__ == "__main__":
     stream = p.open(format=p.get_format_from_width(WaveObj.getsampwidth()),
                     channels=WaveObj.getnchannels(),
                     rate=WaveObj.getframerate(),
-                    output=True)   
- 
- 
+                    output=True)
+
     i=0
     while True:
         #pobieramy nowe ramki z pliku
         WaveFrame = WaveObj.readframes(FramesShift)
-        
+
         #jesli nie ma wiecej ramek to wyjdz z petli
         if not WaveFrame: break
-        
+
         stream.write(WaveFrame)
-        
+
         #Flow:
         #1. stworz macierz numpy na ramki (inicuj zerami) DONE 
         #2. odczyt nowej porcji danych tak jak jest: WaveFrame = WaveObj.readframes(FramesShift)DONE
@@ -132,15 +129,15 @@ if __name__ == "__main__":
         #6. obliczanie rfft DONE
         RealFramesLength = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
         WaveFrame = struct.unpack('<{n}{t}'.format(n=RealFramesLength*WaveParams.nchannels,t=FormatDict[WaveParams.sampwidth]),WaveFrame)
-        WaveData = np.delete(WaveData, np.s_[0:len(WaveFrame)], None)    
+        WaveData = np.delete(WaveData, np.s_[0:len(WaveFrame)], None)
         WaveData = np.append(WaveData,WaveFrame)
         WaveChannel = np.array(WaveData).reshape(-1,WaveParams.nchannels)
-    
+
         #liczymy rfft dla wszystkich kanalow
         #Spectrum = np.absolute(np.fft.rfft(WaveChannel,axis=0))
         # oraz sumujemy wszystkie kanaly
         #Spectrum = np.sum(Spectrum,axis=1)
-        
+
         #Liczymy tylko kanal nr.1
         WaveChannel = WaveChannel[:,0] 
         if 0 != WaveChannel.sum():
@@ -150,15 +147,14 @@ if __name__ == "__main__":
             Spectrum = np.log10(Spectrum)**2
         else:
             Spectrum = np.array([0])
-       
+
         SendSpectrumToMatrix(Spectrum,MATRIX_CTX)
-     
+
         print("Iter: ",i)
         #print("Spectrum: ",Spectrum)
         i += 1
         #break
-    
-  
+
     print("Koniec czytania pliku .wav")
     stream.stop_stream()
     stream.close()
