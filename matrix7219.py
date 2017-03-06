@@ -102,10 +102,10 @@ def Matrix7219SendMatrixData(matrix_7219_ctx,data):
                     Matrix7219Write(int_row)
 #                else:
 #                    print("Wiersz bez zmian")
+            #store data as current displayed data
+            matrix_7219_ctx['Data'] = data
 #        else:
 #            print("Cała data bez zmian")
-        #store data as current displayed data
-        matrix_7219_ctx['Data'] = data
 #    else:
 #        print("Zly format ramki data")
     return    
