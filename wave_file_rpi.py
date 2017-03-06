@@ -1,3 +1,5 @@
+#Topmost script file
+
 import sys
 import wave
 import struct
@@ -6,7 +8,7 @@ import numpy as np
 import matrix7219
 import pyaudio
 
-
+#Send spectrum bargraph to Matrix MAX7219
 def SendBargraphToMatrix(Bargraph,Matrix_Ctx):
     if Bargraph.size == Matrix_Ctx['N']:
         n = Matrix_Ctx['n']
@@ -16,30 +18,33 @@ def SendBargraphToMatrix(Bargraph,Matrix_Ctx):
         matrix7219.Matrix7219SendMatrixData(Matrix_Ctx,Bargraph)
     return
 
-#<TODO:> komentarz
-def PrepareBargraph(Bargraph,Matrix_Ctx):
-    if Bargraph.size == Matrix_Ctx['N']:
+#Convert Spectrum array into matrix max7219 bargraph array
+def PrepareBargraph(Spectrum,Matrix_Ctx):
+    if Spectrum.size == Matrix_Ctx['N']:
         #sprawdzamy czy wartosci mieszcza sie w zakresie, jak nie to obetnij do zakresu <0,H>
-        Bargraph = np.clip(Bargraph,0,Matrix_Ctx['H'])
+        Spectrum = np.clip(Spectrum,0,Matrix_Ctx['H'])
         #musimy podzielic Spectrum na n wyswietlaczy
         BAR_ARR = Matrix_Ctx['BAR_ARR']
-        Bargraph = Bargraph.reshape(n,-1)
-        Result = []
-        for max7219bars in Bargraph:
+        Spectrum = Spectrum.reshape(n,-1)
+        Bargraph = []
+        for max7219bars in Spectrum:
             Bars = np.vstack((BAR_ARR[item] for item in max7219bars))
             Bars = np.packbits(Bars, axis=0).flatten()
-            Result.append(Bars)
-        return np.array(Result).transpose()
+            Bargraph.append(Bars)
+        return np.array(Bargraph).transpose()
     else:
         return np.array([0])
 
-#<TODO:> komentarz    
+# Aggregate data from rfft operation 
+# IN Spectrum - spectrum from numpy.rfft transformation
+# IN N - number of spectrum bars
+# OUT - Aggregated spectrum numpy array [array shape: (N,)]
 def AggregateList(Spectrum,N):
-    #metoda na przyspieszenie, pod warunkiem ze szerokosci przedzialow beda takie same
     if Spectrum.size > N:
+        #in order to accelerate aggregation we number of Spectrum frames must be dividable by N
         if 0!=(Spectrum.size%N):
             DivideLength = Spectrum.size - Spectrum.size%N
-            #obcianamy x ostatnich probek z Spectrum tak zeby bylo podzielne przez N i korzystac tylko z numpy
+            #delete x last items from Spectrum in order to meet "dividable by N" requirement
             Spectrum = np.delete(Spectrum,np.s_[DivideLength:],0)
 
             Spectrum = np.reshape(Spectrum,(N,Spectrum.size//N))
@@ -48,7 +53,11 @@ def AggregateList(Spectrum,N):
         return np.array([0])
 
 
-#<TODO:> komentarz    
+#Scale aggregated Spectrum
+# IN Spectrum - aggregated spectrum data
+# IN OldMax - old maximum allowed value in Spectrum
+# IN NewMax - new maximum allowed value in Spectrum
+# OUT - Scaled Spectrum
 def ScaleSpectrum(Spectrum,OldMax,NewMax):
     #Saturation filter
     if 0 != OldMax:
@@ -57,7 +66,9 @@ def ScaleSpectrum(Spectrum,OldMax,NewMax):
     else:
         return np.array([0])
  
-
+# Send rfft spectrum to matrix max7219 display
+# IN Spectrum - spectrum from numpy.rfft transformation
+# IN Matrix_Ctx - Matrix MAX7219 object handle
 def SendSpectrumToMatrix(Spectrum,Matrix_Ctx):
     Spectrum = AggregateList(Spectrum,Matrix_Ctx['N'])
     Spectrum = ScaleSpectrum(Spectrum,32,Matrix_Ctx['H'])
@@ -69,8 +80,8 @@ def SendSpectrumToMatrix(Spectrum,Matrix_Ctx):
 if __name__ == "__main__":
 
     #Global variables and settings
-    #.wav file to proceed
-    #<TODO:> sprawdzanie czy plik jest poprawny, czy istnieje, czy ma dozwolona forme itd.
+    #FileName - .wav file to proceed
+    #<TODO:> Check filename argument
     #FPS - Frames per second to display
     #n - Number of max7219 displays serially connected
     FileName = sys.argv[1]
@@ -88,7 +99,7 @@ if __name__ == "__main__":
     print("Number of audio frames: ".ljust(25),WaveObj.getnframes())
     print("Compression type: ".ljust(25),WaveObj.getcomptype(),"\n")
 
-    WaveParams = WaveObj.getparams(); #print("Params: ".ljust(25),WaveParams, "\n")
+    WaveParams = WaveObj.getparams();
 
     #8-bit samples are stored as unsigned bytes, ranging from 0 to 255. 
     #16-bit samples are stored as 2's-complement signed integers, ranging from -32768 to 32767.
@@ -99,11 +110,11 @@ if __name__ == "__main__":
     #FramesShift  - number of frames over which we will shift our signal in single iteration (half of WindowLength)
     #WaveData     - array of frames from .wav file
 
-    #Chcemy żeby ilosc probek branych do liczenie widma byla wielokrotnoscia ilosci linii na wykresie
     FramesLength = WaveParams.framerate
     FramesShift  = math.floor(WaveParams.framerate/FPS)
     WaveData     = np.zeros(FramesLength)
 
+    #Open audio stream
     p = pyaudio.PyAudio()
     stream = p.open(format=p.get_format_from_width(WaveObj.getsampwidth()),
                     channels=WaveObj.getnchannels(),
@@ -112,37 +123,38 @@ if __name__ == "__main__":
 
     i=0
     while True:
-        #pobieramy nowe ramki z pliku
+        #read new frames from .wav file
         WaveFrame = WaveObj.readframes(FramesShift)
 
-        #jesli nie ma wiecej ramek to wyjdz z petli
+        #end of frames - loop exit
         if not WaveFrame: break
 
+        #play audio frames
         stream.write(WaveFrame)
 
-        #Flow:
-        #1. stworz macierz numpy na ramki (inicuj zerami) DONE 
-        #2. odczyt nowej porcji danych tak jak jest: WaveFrame = WaveObj.readframes(FramesShift)DONE
-        #3. usun przestarzale ramki z poczatku .delete DONE
-        #4. dodanie odczytanej macierzy numpy z ramkami .append DONE
-        #5. rozdzial na kanalay .reshape DONE
-        #6. obliczanie rfft DONE
+        #Program flow:
+        #1. create numpy array for audio frames (initialize with zeros) (done outside loop)
+        #2. read new data from filew with WaveObj.readframes()
+        #3. delete the oldest frame from WaveFrame using numpy.delete()
+        #4. add new frames using numpy.append()
+        #5. Split WaveData into channels using numpy.reshape()
+        #6. perfrom numpy.rfft() only for first channel
         RealFramesLength = len(WaveFrame)//(WaveParams.sampwidth*WaveParams.nchannels)
         WaveFrame = struct.unpack('<{n}{t}'.format(n=RealFramesLength*WaveParams.nchannels,t=FormatDict[WaveParams.sampwidth]),WaveFrame)
         WaveData = np.delete(WaveData, np.s_[0:len(WaveFrame)], None)
         WaveData = np.append(WaveData,WaveFrame)
         WaveChannel = np.array(WaveData).reshape(-1,WaveParams.nchannels)
 
-        #liczymy rfft dla wszystkich kanalow
+        #rfft for all channels:
         #Spectrum = np.absolute(np.fft.rfft(WaveChannel,axis=0))
-        # oraz sumujemy wszystkie kanaly
+        # sum all channels
         #Spectrum = np.sum(Spectrum,axis=1)
 
-        #Liczymy tylko kanal nr.1
-        WaveChannel = WaveChannel[:,0] 
+        #rfft only for first channel:
+        WaveChannel = WaveChannel[:,0]
         if 0 != WaveChannel.sum():
             Spectrum = np.absolute(np.fft.rfft(WaveChannel))
-            #przejscie na decybele,podnoszenie ^2 tylko dla celow wizualizacyjnych
+            #convert to dB scale and use power of ^2 (for better visualization purpose)
             #<TODO:> Sprodical failure when log operation is math illegal - need a fix
             Spectrum = np.log10(Spectrum)**2
         else:
@@ -155,11 +167,11 @@ if __name__ == "__main__":
         i += 1
         #break
 
-    print("Koniec czytania pliku .wav")
+    print("End of .wav file")
     stream.stop_stream()
     stream.close()
     p.terminate()
     matrix7219.Matrix7219Clean(MATRIX_CTX)
     matrix7219.Matrix7219Close()
-    print("Koniec skryptu")
+    print("End od script. Bye")
 #----End of script----
