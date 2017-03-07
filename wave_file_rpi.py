@@ -155,7 +155,7 @@ if __name__ == "__main__":
         if 0 != WaveChannel.sum():
             Spectrum = np.absolute(np.fft.rfft(WaveChannel))
             #convert to dB scale and use power of ^2 (for better visualization purpose)
-            #<TODO:> Sprodical failure when log operation is math illegal - need a fix
+            np.place(Spectrum, Spectrum < 1, 1)
             Spectrum = np.log10(Spectrum)**2
         else:
             Spectrum = np.array([0])
